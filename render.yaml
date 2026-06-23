@@ -1,6 +1,6 @@
 services:
-  - type: worker
-    name: glassbox-agent
+  - type: web
+    name: glass-box
     runtime: node
     buildCommand: npm install
     startCommand: npm run start
