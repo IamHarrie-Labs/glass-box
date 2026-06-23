@@ -46,6 +46,11 @@ function push() {
   console.log(`[push] ${ok ? "pushed to GitHub" : "push failed"} at ${ts}`);
 }
 
-console.log(`Log pusher started — syncing every ${INTERVAL_MS / 60000}m to ${REPO}`);
-push(); // immediate first push
-setInterval(push, INTERVAL_MS);
+export function startPusher() {
+  console.log(`Log pusher started — syncing every ${INTERVAL_MS / 60000}m to ${REPO}`);
+  push();
+  setInterval(push, INTERVAL_MS);
+}
+
+// Run directly when invoked as a script (npm run push-log)
+startPusher();

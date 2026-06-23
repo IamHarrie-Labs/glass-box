@@ -54,34 +54,38 @@ console.log(`Glass Box agent · ${SYMBOL} · brain: ${USE_LLM ? `LLM (${process.
   (MAX_TICKS ? ` · ${MAX_TICKS} ticks` : " · continuous"));
 console.log("Ctrl+C to stop. Trades stream to data/trades.jsonl.\n");
 
-let tick = 0;
-while (true) {
-  tick++;
-  try {
-    const { pair, snapshot } = await fetchSnapshot(SYMBOL);
-    const { decision } = await decideWith(snapshot);
+export async function run() {
+  let tick = 0;
+  while (true) {
+    tick++;
+    try {
+      const { pair, snapshot } = await fetchSnapshot(SYMBOL);
+      const { decision } = await decideWith(snapshot);
 
-    if (decision) {
-      const rec = openPosition(pair, decision.side, snapshot, decision.thesis);
-      console.log(
-        `[${ts()}] OPEN  ${rec.tradeId} ${decision.side.toUpperCase().padEnd(5)} @${snapshot.price.toFixed(1)} ` +
-        `"${decision.thesis.primaryDriver}" conf ${decision.thesis.confidence} — ${decision.thesis.naturalLanguage}`
-      );
-    } else {
-      console.log(`[${ts()}] flat  (no setup: rsi ${snapshot.rsi14.toFixed(0)}, 1h ${(snapshot.btc1hReturn * 100).toFixed(2)}%)`);
+      if (decision) {
+        const rec = openPosition(pair, decision.side, snapshot, decision.thesis);
+        console.log(
+          `[${ts()}] OPEN  ${rec.tradeId} ${decision.side.toUpperCase().padEnd(5)} @${snapshot.price.toFixed(1)} ` +
+          `"${decision.thesis.primaryDriver}" conf ${decision.thesis.confidence} — ${decision.thesis.naturalLanguage}`
+        );
+      } else {
+        console.log(`[${ts()}] flat  (no setup: rsi ${snapshot.rsi14.toFixed(0)}, 1h ${(snapshot.btc1hReturn * 100).toFixed(2)}%)`);
+      }
+
+      const closed = await closeMatured(HOLD_MINUTES);
+      if (closed > 0) console.log(`[${ts()}] closed ${closed} matured position(s). ${openCount()} still open.`);
+    } catch (e) {
+      console.error(`[${ts()}] tick error:`, (e as Error).message);
     }
 
-    const closed = await closeMatured(HOLD_MINUTES);
-    if (closed > 0) console.log(`[${ts()}] closed ${closed} matured position(s). ${openCount()} still open.`);
-  } catch (e) {
-    console.error(`[${ts()}] tick error:`, (e as Error).message);
+    if (MAX_TICKS && tick >= MAX_TICKS) break;
+    await sleep(TICK_SECONDS * 1000);
   }
 
-  if (MAX_TICKS && tick >= MAX_TICKS) break;
-  await sleep(TICK_SECONDS * 1000);
+  const flushed = await closeMatured(0);
+  if (flushed > 0) console.log(`Flushed ${flushed} open position(s) at exit.`);
+  console.log("Agent stopped. Run `npm run autopsy` to analyze.");
 }
 
-// On finite runs, force-close anything still open so the log is fully analyzable.
-const flushed = await closeMatured(0);
-if (flushed > 0) console.log(`Flushed ${flushed} open position(s) at exit.`);
-console.log("Agent stopped. Run `npm run autopsy` to analyze.");
+// Run directly when invoked as a script (npm run agent)
+run();

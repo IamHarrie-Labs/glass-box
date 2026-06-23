@@ -4,7 +4,7 @@
   "description": "Glass Box — an audit layer that measures the gap between an AI trading agent's stated reasoning and what actually drove its PnL.",
   "type": "module",
   "scripts": {
-    "start": "tsx src/agent/run.ts & tsx src/persist/push.ts",
+    "start": "tsx src/server.ts",
     "agent": "tsx src/agent/run.ts",
     "push-log": "tsx src/persist/push.ts",
     "autopsy": "tsx src/engine/run.ts",
