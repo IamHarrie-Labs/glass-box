@@ -27,6 +27,7 @@ export interface DriverVerdict {
   edge: number;               // winRateWhenCited - baselineWinRate
   tStat: number;              // rough significance of that edge
   verdict: "real_edge" | "decorative" | "harmful" | "insufficient_data";
+  sampleRationale?: string;   // one real quote from the agent's natural language
 }
 
 export interface CalibrationBucket {
@@ -89,6 +90,7 @@ export function runAutopsy(records: DecisionRecord[]): AutopsyReport {
       cited.map((r) => (r.outcome!.win ? 1 : 0)),
       others.map((r) => (r.outcome!.win ? 1 : 0))
     );
+    const sample = cited.find(r => r.statedThesis.naturalLanguage);
     return {
       driver: d,
       timesCited: cited.length,
@@ -97,6 +99,7 @@ export function runAutopsy(records: DecisionRecord[]): AutopsyReport {
       edge,
       tStat,
       verdict: classify(edge, tStat, cited.length),
+      sampleRationale: sample?.statedThesis.naturalLanguage,
     };
   }).sort((a, b) => b.timesCited - a.timesCited);
 
