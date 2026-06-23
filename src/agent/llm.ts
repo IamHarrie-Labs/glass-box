@@ -1,34 +1,107 @@
 /**
- * LLM-based decision making. This is what turns Glass Box's subject from a
- * rules bot into a real *reasoning* agent — which is the whole point: an LLM
- * that narrates a confident thesis is exactly the thing whose self-deception
- * the autopsy engine is built to expose.
+ * LLM-based decision making.
+ *
+ * On startup, loads data/report.json (if it exists) and:
+ *   1. Restricts the driver list to only drivers with verdict "real_edge"
+ *   2. Injects a performance feedback block into the system prompt so the
+ *      agent knows which of its past reasons were real and which were fiction
  *
  * Provider-agnostic via an OpenAI-compatible /chat/completions endpoint.
- * Defaults to the hackathon's free Qwen endpoint; set LLM_* to point anywhere
- * (Qwen, Claude via a gateway, OpenAI, a local model, etc.).
- *
- *   LLM_API_KEY   required to enable the LLM agent (else run.ts uses rules)
- *   LLM_BASE_URL  default https://hackathon.bitgetops.com/v1  (Bitget Qwen)
- *   LLM_MODEL     default qwen3.6-plus
- *
- * The model is instructed to map its thinking onto our closed DriverTag set so
- * the engine can aggregate "when you cited X, did X pay off?". Free-text
- * reasons would be unanalyzable — forcing the structured driver IS the trick.
+ *   LLM_API_KEY   required to enable the LLM agent
+ *   LLM_BASE_URL  default https://api.groq.com/openai/v1
+ *   LLM_MODEL     default llama-3.1-8b-instant
  */
+import { existsSync, readFileSync } from "node:fs";
 import type { MarketSnapshot, StatedThesis, Side, DriverTag } from "../types.ts";
 import type { Decision } from "./strategy.ts";
+import type { AutopsyReport } from "../engine/autopsy.ts";
 
-const DRIVERS: DriverTag[] = [
+const ALL_DRIVERS: DriverTag[] = [
   "momentum_breakout", "mean_reversion", "trend_follow",
   "sentiment_extreme", "funding_signal", "breakdown_short", "news_catalyst",
 ];
 
-export function llmEnabled(): boolean {
-  return Boolean(process.env.LLM_API_KEY);
+// ── load autopsy feedback at startup ────────────────────────────────────────
+
+interface Feedback {
+  allowedDrivers: DriverTag[];
+  systemBlock: string;
 }
 
-const SYSTEM = `You are an autonomous crypto perpetual-futures trading agent.
+function loadFeedback(): Feedback {
+  if (!existsSync("data/report.json")) {
+    return { allowedDrivers: ALL_DRIVERS, systemBlock: "" };
+  }
+
+  let report: AutopsyReport;
+  try {
+    report = JSON.parse(readFileSync("data/report.json", "utf8"));
+  } catch {
+    return { allowedDrivers: ALL_DRIVERS, systemBlock: "" };
+  }
+
+  const realEdge = report.drivers
+    .filter((d) => d.verdict === "real_edge")
+    .map((d) => d.driver);
+
+  const harmful = report.drivers
+    .filter((d) => d.verdict === "harmful")
+    .map((d) => d.driver);
+
+  const decorative = report.drivers
+    .filter((d) => d.verdict === "decorative")
+    .map((d) => d.driver);
+
+  // Use only proven drivers; fall back to full list if none are proven yet
+  const allowedDrivers: DriverTag[] = realEdge.length > 0 ? realEdge : ALL_DRIVERS;
+
+  const topSignal = report.attribution[0];
+  const winPct = (report.overallWinRate * 100).toFixed(0);
+  const confGapPct = (report.overconfidenceGap * 100).toFixed(0);
+
+  const lines: string[] = [
+    "",
+    "YOUR VERIFIED PERFORMANCE HISTORY:",
+    `- Analyzed ${report.totalTrades} closed trades. Overall win rate: ${winPct}%.`,
+    `- Real PnL driver: "${topSignal.feature}" (correlation ${topSignal.correlationWithPnl.toFixed(2)}).`,
+    `  Weight this market feature heavily when deciding direction.`,
+  ];
+
+  if (harmful.length > 0) {
+    lines.push(`- HARMFUL reasons you cited that made your win rate DROP: ${harmful.join(", ")}.`);
+    lines.push(`  Do NOT use these as your primary_driver — they predict losses.`);
+  }
+
+  if (decorative.length > 0) {
+    lines.push(`- Decorative reasons that showed no real edge: ${decorative.join(", ")}.`);
+    lines.push(`  Avoid citing these unless you have genuinely new evidence.`);
+  }
+
+  if (Number(confGapPct) > 5) {
+    lines.push(`- Overconfidence gap: ${confGapPct}pp. Your actual results were ${confGapPct}pp worse than your stated confidence.`);
+    lines.push(`  Calibrate downward — say 0.55 when you mean 0.7.`);
+  }
+
+  lines.push(`- Only use drivers that have a proven edge. If the market does not match one of your allowed drivers, return flat.`);
+
+  return {
+    allowedDrivers,
+    systemBlock: lines.join("\n"),
+  };
+}
+
+const { allowedDrivers: DRIVERS, systemBlock: FEEDBACK } = loadFeedback();
+
+if (FEEDBACK) {
+  console.log(`[llm] Autopsy feedback loaded. Allowed drivers: ${DRIVERS.join(", ")}`);
+} else {
+  console.log(`[llm] No autopsy data yet — using all drivers.`);
+}
+
+// ── system prompt ────────────────────────────────────────────────────────────
+
+function buildSystem(): string {
+  return `You are an autonomous crypto perpetual-futures trading agent.
 Each tick you receive an objective market snapshot and must decide one action.
 You MUST respond with a single JSON object and nothing else:
 
@@ -36,14 +109,20 @@ You MUST respond with a single JSON object and nothing else:
   "action": "long" | "short" | "flat",
   "primary_driver": one of [${DRIVERS.join(", ")}],
   "confidence": number between 0 and 1,
-  "supporting_signals": string[],   // brief cues you noticed
-  "rationale": string               // one sentence, plain English
+  "supporting_signals": string[],
+  "rationale": string
 }
 
 Rules:
-- "primary_driver" must be the SINGLE reason you most stand behind for this trade.
-- Be honest about confidence: it should reflect real conviction, not bravado.
-- If there is no clear setup, return "flat".`;
+- "primary_driver" MUST be one of the allowed drivers listed above. No others are accepted.
+- Be honest about confidence: reflect real conviction, not bravado.
+- If the market does not clearly match one of your allowed drivers, return "flat".
+- "rationale" must be one honest sentence. Do not invent reasons that are not in the data.${FEEDBACK}`;
+}
+
+const SYSTEM = buildSystem();
+
+// ── user prompt ──────────────────────────────────────────────────────────────
 
 function buildUserPrompt(snap: MarketSnapshot): string {
   return `Market snapshot (BTCUSDT perpetual):
@@ -58,7 +137,12 @@ function buildUserPrompt(snap: MarketSnapshot): string {
 Decide your action now. Respond with JSON only.`;
 }
 
-/** Extract the first JSON object from a model response, tolerating code fences. */
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+export function llmEnabled(): boolean {
+  return Boolean(process.env.LLM_API_KEY);
+}
+
 function parseJson(text: string): any {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   const raw = fenced ? fenced[1] : text;
@@ -68,11 +152,11 @@ function parseJson(text: string): any {
   return JSON.parse(raw.slice(start, end + 1));
 }
 
-/** Ask the LLM for a decision. Returns null on "flat". Throws on transport/parse
- *  errors so the caller can fall back to the rules agent for that tick. */
+// ── main decision function ───────────────────────────────────────────────────
+
 export async function decideLLM(snap: MarketSnapshot): Promise<Decision | null> {
-  const baseUrl = process.env.LLM_BASE_URL ?? "https://hackathon.bitgetops.com/v1";
-  const model = process.env.LLM_MODEL ?? "qwen3.6-plus";
+  const baseUrl = process.env.LLM_BASE_URL ?? "https://api.groq.com/openai/v1";
+  const model = process.env.LLM_MODEL ?? "llama-3.1-8b-instant";
   const apiKey = process.env.LLM_API_KEY!;
 
   const res = await fetch(`${baseUrl}/chat/completions`, {
@@ -80,7 +164,7 @@ export async function decideLLM(snap: MarketSnapshot): Promise<Decision | null> 
     headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
       model,
-      temperature: 0.6,
+      temperature: 0.4,
       messages: [
         { role: "system", content: SYSTEM },
         { role: "user", content: buildUserPrompt(snap) },
@@ -98,10 +182,11 @@ export async function decideLLM(snap: MarketSnapshot): Promise<Decision | null> 
     return null;
   }
 
-  // Validate / clamp the model's structured output before trusting it.
+  // Only accept drivers from the verified allowed list
   const driver: DriverTag = DRIVERS.includes(parsed.primary_driver)
     ? parsed.primary_driver
-    : "momentum_breakout";
+    : DRIVERS[0];
+
   const confidence = Math.max(0, Math.min(1, Number(parsed.confidence) || 0.5));
 
   const thesis: StatedThesis = {
