@@ -16,8 +16,9 @@ const BRANCH = process.env.GITHUB_BRANCH ?? "master";
 const TOKEN  = process.env.GITHUB_TOKEN;
 
 if (!TOKEN) {
-  console.error("GITHUB_TOKEN not set — log persistence disabled.");
-  process.exit(0);
+  console.warn("GITHUB_TOKEN not set — log persistence disabled. Agent will still run.");
+  // keep process alive so the start script doesn't exit early on Render
+  setInterval(() => {}, 1 << 30);
 }
 
 function run(cmd: string) {
@@ -26,7 +27,7 @@ function run(cmd: string) {
 }
 
 function push() {
-  if (!existsSync("data/trades.jsonl")) return;
+  if (!TOKEN || !existsSync("data/trades.jsonl")) return;
 
   // rebuild autopsy + site so GitHub Pages always has fresh data
   run(`npx tsx src/engine/run.ts`);
