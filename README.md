@@ -1,129 +1,190 @@
-# Glass Box 🔍
+# Glass Box
 
-**An audit layer that measures the gap between what an AI trading agent _says_ and what actually drove its PnL.**
+**Glass Box catches AI trading agents lying to themselves.**
 
-Bitget AI Base Camp Hackathon S1 · Track 2 (Trading Infra)
+Every LLM trading agent writes a confident reason for every trade it makes. Glass Box checks whether that reason is actually true — or just a story the agent told itself.
+
+Live demo → **[tryglassbox.vercel.app](https://tryglassbox.vercel.app)**
 
 ---
 
-## The thesis
+## The problem in one sentence
 
-Every LLM trading agent narrates its trades: _"going long BTC — momentum breakout with bullish funding."_ Nobody checks whether that stated reason is what actually made money.
+When an AI agent says *"going long — momentum breakout with bullish funding"* and then wins the trade, was it right? Or did it just get lucky because BTC went up that hour? Without Glass Box, you have no way to know. With it, you do.
 
-Usually it isn't. The most common silent failure of LLM traders is **self-deception**: the agent cites a sophisticated-sounding reason while its PnL is really just BTC beta — it makes money when the market goes up and loses when it doesn't, no matter what it claims.
+## What it found on a real agent
 
-Glass Box catches this. It records each agent decision's **stated thesis at entry, before the outcome is known**, then after outcomes resolve it statistically tests whether the stated reason actually predicted the result — or was decorative narration. That gap is something only an LLM-era tool needs to measure, because only LLM agents produce natural-language reasons.
+We ran Glass Box on 202 live paper trades and the autopsy was brutal:
 
-## What it does
+- **Self-deception index: 100%** — not one stated reason was a genuine edge
+- **mean_reversion was actively harmful** — when the agent cited it, win rate dropped from 45% to 25%
+- **At 90%+ confidence, it won only 19% of the time** — high confidence was a negative signal
+- **The real driver: 24h BTC momentum (corr 0.77)** — the agent was riding beta and narrating fiction
 
-Given a trade log, the autopsy engine answers three questions:
+See the full report at [tryglassbox.vercel.app](https://tryglassbox.vercel.app) → Report tab.
 
-1. **Attribution** — Which _objective_ market feature actually moved with PnL? (correlation)
-2. **Self-deception** — For each reason the agent cited, did citing it beat its baseline, or is it just a story? (`real_edge` / `decorative` / `harmful`)
-3. **Calibration** — When the agent was confident, did it actually win more? (overconfidence gap)
+---
 
-It outputs a terminal report, a structured `report.json`, and a self-contained `report.html`.
-
-## Quick start (no keys needed)
+## Try it in 2 minutes (no API keys needed)
 
 ```bash
+git clone https://github.com/IamHarrie-Labs/glass-box
+cd glass-box
 npm install
-npm run demo      # seed a realistic agent log, run the autopsy, build the report
+npm run demo
 ```
 
-Then open `data/report.html`. The bundled demo agent _thinks_ it trades momentum breakouts; the autopsy reveals its PnL is 0.90-correlated with `btc24hReturn` and its favorite reason is **decorative** — and that at 90%+ confidence it won only 27% of the time.
+Then open `data/report.html` in your browser. The demo runs the full autopsy on a built-in agent log and shows you the verdict — no account, no keys, no network needed.
 
-## Run the live agent (real Bitget data)
+---
 
-The agent perceives **live Bitget market data** (public v2 API — candles, ticker, funding rate; no secret keys required for paper trading), decides, and paper-trades. Positions open at the real price and close at the real later price, so PnL reflects genuine market movement.
+## Run it live (real market data)
 
-```bash
-npm run agent     # continuous: 1h ticks, 4h holds, streams to data/trades.jsonl
+### 1. Get a free LLM key
+
+Glass Box works with any OpenAI-compatible LLM. The easiest free option is [Groq](https://console.groq.com) — sign up, create an API key, done.
+
+### 2. Create a `.env` file
+
+Copy `.env.example` to `.env` and fill it in:
+
+```
+LLM_API_KEY=your-groq-key-here
+LLM_BASE_URL=https://api.groq.com/openai/v1
+LLM_MODEL=llama-3.1-8b-instant
+TICK_SECONDS=120
 ```
 
-Configure via env:
-
-| Var | Default | Meaning |
-|---|---|---|
-| `SYMBOL` | `BTCUSDT` | trading pair |
-| `TICK_SECONDS` | `3600` | seconds between decisions |
-| `HOLD_MINUTES` | `240` | how long each paper position is held |
-| `MAX_TICKS` | `0` | stop after N ticks (0 = run forever) |
-
-Fast live smoke test (opens + closes within ~1 minute):
+### 3. Start the agent
 
 ```bash
-TICK_SECONDS=10 HOLD_MINUTES=0.3 MAX_TICKS=6 npm run agent
-npm run autopsy && npm run report
-```
-
-### LLM brain (recommended — makes the autopsy meaningful)
-
-By default the agent uses simple rules. Set `LLM_API_KEY` and it instead asks a
-language model to read the snapshot and produce a structured thesis — an actual
-*reasoning* agent, whose self-deception is what Glass Box exists to measure. On
-any model error it falls back to rules for that tick, so the loop never stalls.
-
-Defaults to the hackathon's free Qwen endpoint:
-
-```bash
-export LLM_API_KEY=...                              # your Bitget Qwen key
-# optional overrides:
-# export LLM_BASE_URL=https://hackathon.bitgetops.com/v1   (default)
-# export LLM_MODEL=qwen3.6-plus                            (default)
 npm run agent
 ```
 
-Point `LLM_BASE_URL` / `LLM_MODEL` at any OpenAI-compatible endpoint to swap models.
+The agent fetches live BTC data from Bitget, asks the LLM to reason about it, and logs every decision with its stated thesis before the outcome is known. Leave it running — it writes to `data/trades.jsonl` continuously.
 
-> **Network note:** `api.bitget.com` rate-limits / geo-blocks some datacenter IPs. If you see repeated timeouts, run from a Bitget-served region or via VPN. The `npm run demo` path works fully offline.
+### 4. Run the autopsy
 
-### Authenticated trading (optional)
-
-Paper trading needs no keys. For live execution via the Bitget Agent Hub MCP server:
+Once you have trades (a few hours is enough to see patterns):
 
 ```bash
-export BITGET_API_KEY=...
-export BITGET_SECRET_KEY=...
-export BITGET_PASSPHRASE=...
-npx bitget-hub install --target claude   # or codex/cursor
+npm run autopsy
+npm run site
 ```
 
-Glass Box's design is execution-agnostic: swap `openPosition()` in `src/agent/paper.ts` for a real order call and everything else is unchanged.
+Open `docs/index.html` to see the full Glass Box site with your live data.
 
-## Audit _any_ agent (the infra story)
+---
 
-Glass Box doesn't only analyze its own agent. Any trader — yours, a Bitget Playbook strategy, anything — can be audited by emitting **Decision Records** (the schema in `src/types.ts`) to a JSONL file and pointing the engine at it:
+## How it works
+
+Glass Box is two things:
+
+**The agent** reads live market data (price, RSI, funding rate, Fear and Greed, volatility) and asks an LLM to decide — long, short, or flat — and explain why. That explanation is locked into the log *before* the position opens. The agent cannot revise its reasoning after seeing whether the trade worked.
+
+**The autopsy engine** runs three analyses once positions close:
+
+| Analysis | Question it answers |
+|---|---|
+| Signal attribution | Which market feature actually predicted your PnL? |
+| Self-deception detection | When you cited each reason, did those trades beat your baseline? |
+| Confidence calibration | When you said 90% confident, did you actually win 90%? |
+
+Each stated reason gets a verdict: `real_edge`, `decorative`, or `harmful`.
+
+---
+
+## Audit your own agent
+
+Glass Box is not just for its built-in agent. Any agent can be audited by logging Decision Records to a JSONL file. The schema is simple:
+
+```json
+{
+  "tradeId": "t_001",
+  "timestamp": "2026-06-23T09:17:09.000Z",
+  "pair": "BTCUSDT",
+  "side": "long",
+  "entryPrice": 62446.5,
+  "sizeUsd": 1000,
+  "statedThesis": {
+    "primaryDriver": "mean_reversion",
+    "supportingSignals": ["rsi_oversold"],
+    "confidence": 0.70,
+    "naturalLanguage": "Market is oversold, expecting a bounce."
+  },
+  "marketSnapshot": {
+    "price": 62446.5,
+    "btc1hReturn": -0.007,
+    "btc24hReturn": -0.026,
+    "rsi14": 12.4,
+    "fundingRate": -0.0001,
+    "fearGreed": 38,
+    "volatility": 0.018
+  },
+  "outcome": {
+    "exitPrice": 63100.0,
+    "pnlUsd": 10.47,
+    "heldMinutes": 240
+  }
+}
+```
+
+Point the engine at your log:
 
 ```bash
 GLASSBOX_LOG=path/to/your-agent.jsonl npm run autopsy
 ```
 
-The only contract: log `statedThesis` + `marketSnapshot` at entry, backfill `outcome` at exit. See `src/types.ts` for the full schema.
+---
 
-## How it works
+## Commands
 
-```
-Bitget live data ──▶ Agent (decides + logs stated thesis) ──▶ trades.jsonl
-                                                                   │
-                                              outcome backfilled at exit
-                                                                   ▼
-                                       Autopsy Engine ──▶ report.json / report.html
-```
-
-| Path | Role |
+| Command | What it does |
 |---|---|
-| `src/types.ts` | Decision Record schema — the data contract everything shares |
-| `src/bitget/market.ts` | Live Bitget perception → `MarketSnapshot` |
-| `src/agent/strategy.ts` | The (deliberately naive) decision logic |
-| `src/agent/paper.ts` | Paper executor + outcome backfill |
-| `src/engine/autopsy.ts` | The three analysis jobs — the product |
-| `src/report/build.ts` | HTML report renderer |
+| `npm run demo` | Full offline demo — no keys or network needed |
+| `npm run agent` | Start the live LLM trading agent |
+| `npm run autopsy` | Analyze the trade log, write report.json |
+| `npm run site` | Build the full Glass Box site to docs/index.html |
+| `npm run report` | Build just the autopsy HTML report |
 
-## Why "deliberately naive" agent?
+---
 
-The agent isn't trying to win on alpha — it's a realistic _subject_ for the audit. A naive momentum-chaser that quietly rides beta while narrating confident theses is exactly the agent Glass Box exists to expose. The point isn't a profitable bot; it's a tool that tells any agent the truth about itself.
+## Project structure
 
-## License
+```
+src/
+  agent/
+    run.ts        the trading loop
+    llm.ts        LLM decision layer (provider-agnostic)
+    strategy.ts   rules-based fallback
+    paper.ts      paper trade executor
+  bitget/
+    market.ts     live market data from Bitget public API
+  engine/
+    autopsy.ts    the three analysis jobs
+    stats.ts      correlation + significance helpers
+    run.ts        autopsy entry point
+  report/
+    build.ts      HTML report generator
+    site.ts       full multi-page site generator
+  persist/
+    push.ts       hourly GitHub log sync (for server deployments)
+  server.ts       HTTP server + agent (for Render / cloud deployment)
+  types.ts        shared types and Decision Record schema
+```
 
-MIT
+---
+
+## Deploy your own instance
+
+The agent runs continuously and needs a server. The free stack:
+
+**Render** (runs the agent) + **Vercel** (hosts the site)
+
+See the [Docs tab](https://tryglassbox.vercel.app/#docs) on the live site for the full deployment guide.
+
+---
+
+Built for **Bitget AI Base Camp Hackathon S1 · Track 2 · Trading Infra**
+
+MIT License
