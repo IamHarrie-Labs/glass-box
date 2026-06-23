@@ -1,0 +1,102 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Glass Box · Agent Autopsy</title>
+<style>
+  :root{--bg:#0b1020;--card:#121a30;--line:#22304f;--ink:#e6ecff;--mut:#8aa0c8;}
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.5 ui-sans-serif,system-ui,Segoe UI,Roboto,sans-serif;padding:32px}
+  .wrap{max-width:860px;margin:0 auto}
+  h1{font-size:22px;margin:0 0 2px} .sub{color:var(--mut);margin:0 0 24px}
+  .verdict{background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid var(--line);
+    border-left:4px solid #d97706;border-radius:12px;padding:18px 20px;margin-bottom:24px;font-size:16px}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .kpi .v{font-size:24px;font-weight:700} .kpi .l{color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:20px}
+  h2{font-size:15px;margin:0 0 4px} .hint{color:var(--mut);font-size:13px;margin:0 0 14px}
+  table{width:100%;border-collapse:collapse} th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);font-size:14px}
+  th{color:var(--mut);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+  td.num{text-align:right;font-variant-numeric:tabular-nums}
+  td.bar{width:42%} td.bar span{display:block;height:10px;border-radius:5px}
+  .pill{color:#fff;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:600;text-transform:capitalize}
+  footer{color:var(--mut);font-size:12px;text-align:center;margin-top:24px}
+</style></head><body><div class="wrap">
+  <h1>Glass Box · Agent Autopsy</h1>
+  <p class="sub">Measuring the gap between what the agent <em>said</em> and what actually drove its PnL.</p>
+
+  <div class="verdict"><strong>Verdict.</strong> The agent's most-cited reason "momentum_breakout" is decorative (51% win vs 48% baseline). Its PnL is really driven by "btc24hReturn" (corr 0.90).</div>
+
+  <div class="grid">
+    <div class="kpi"><div class="v">120</div><div class="l">Trades</div></div>
+    <div class="kpi"><div class="v">50.0%</div><div class="l">Win rate</div></div>
+    <div class="kpi"><div class="v">100.0%</div><div class="l">Self-deception</div></div>
+    <div class="kpi"><div class="v">24.9%</div><div class="l">Overconfidence</div></div>
+  </div>
+
+  <div class="card">
+    <h2>Job 1 · What actually drove PnL</h2>
+    <p class="hint">Correlation of each objective market feature with realized PnL (signed by trade side).</p>
+    <table><thead><tr><th>Feature</th><th class="num">Corr</th><th>Strength</th></tr></thead><tbody><tr><td>btc24hReturn</td><td class="num">0.90</td>
+      <td class="bar"><span style="width:90.29798587631291%;background:#22d3ee"></span></td></tr><tr><td>btc1hReturn</td><td class="num">0.58</td>
+      <td class="bar"><span style="width:58.362210412335514%;background:#22d3ee"></span></td></tr><tr><td>rsi14</td><td class="num">-0.05</td>
+      <td class="bar"><span style="width:5.341937142490375%;background:#f87171"></span></td></tr><tr><td>fearGreed</td><td class="num">-0.05</td>
+      <td class="bar"><span style="width:4.834731392978165%;background:#f87171"></span></td></tr><tr><td>volatility</td><td class="num">-0.03</td>
+      <td class="bar"><span style="width:3.33400621521018%;background:#f87171"></span></td></tr><tr><td>fundingRate</td><td class="num">-0.03</td>
+      <td class="bar"><span style="width:3.1450518399554173%;background:#f87171"></span></td></tr></tbody></table>
+  </div>
+
+  <div class="card">
+    <h2>Job 2 · Are the stated reasons real?</h2>
+    <p class="hint">For each reason the agent cited: did citing it beat its baseline? "Decorative" = a story, not an edge.</p>
+    <table><thead><tr><th>Stated driver</th><th class="num">Cited</th><th class="num">Win</th><th class="num">Base</th><th class="num">Edge</th><th>Verdict</th></tr></thead><tbody><tr>
+      <td>momentum_breakout</td>
+      <td class="num">76</td>
+      <td class="num">51.3%</td>
+      <td class="num">47.7%</td>
+      <td class="num">3.6pp</td>
+      <td><span class="pill" style="background:#d97706">decorative</span></td>
+    </tr><tr>
+      <td>trend_follow</td>
+      <td class="num">22</td>
+      <td class="num">45.5%</td>
+      <td class="num">51.0%</td>
+      <td class="num">-5.6pp</td>
+      <td><span class="pill" style="background:#d97706">decorative</span></td>
+    </tr><tr>
+      <td>funding_signal</td>
+      <td class="num">22</td>
+      <td class="num">50.0%</td>
+      <td class="num">50.0%</td>
+      <td class="num">0.0pp</td>
+      <td><span class="pill" style="background:#d97706">decorative</span></td>
+    </tr></tbody></table>
+  </div>
+
+  <div class="card">
+    <h2>Job 3 · Confidence calibration</h2>
+    <p class="hint">When the agent was confident, did it actually win more? Gap = stated confidence − real win rate.</p>
+    <table><thead><tr><th>Confidence</th><th class="num">Trades</th><th class="num">Said</th><th class="num">Won</th><th class="num">Gap</th></tr></thead><tbody><tr>
+      <td>0.0-0.6</td><td class="num">12</td>
+      <td class="num">57.0%</td>
+      <td class="num">58.3%</td>
+      <td class="num" style="color:#94a3b8">-1.3pp</td>
+    </tr><tr>
+      <td>0.6-0.75</td><td class="num">47</td>
+      <td class="num">67.1%</td>
+      <td class="num">46.8%</td>
+      <td class="num" style="color:#f87171">20.3pp ⚠</td>
+    </tr><tr>
+      <td>0.75-0.9</td><td class="num">46</td>
+      <td class="num">81.7%</td>
+      <td class="num">58.7%</td>
+      <td class="num" style="color:#f87171">23.0pp ⚠</td>
+    </tr><tr>
+      <td>0.9-1.0</td><td class="num">15</td>
+      <td class="num">92.9%</td>
+      <td class="num">26.7%</td>
+      <td class="num" style="color:#f87171">66.2pp ⚠</td>
+    </tr></tbody></table>
+  </div>
+
+  <footer>Generated by Glass Box · open-source agent audit layer · Bitget AI Hackathon S1</footer>
+</div></body></html>
