@@ -67,7 +67,7 @@ A few other things worth knowing. The LLM layer is provider-agnostic. One enviro
 
 Running it takes four commands:
 
-    git clone https://github.com/YOUR_USERNAME/glass-box
+    git clone https://github.com/IamHarrie-Labs/glass-box
     cd glass-box && npm install
     cp .env.example .env
     npm run agent
