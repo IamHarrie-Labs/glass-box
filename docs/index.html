@@ -107,9 +107,13 @@ tr:hover td{background:#FAFAF8}
 /* ── verdict banner ── */
 .verdict-banner{background:#fff;border:1px solid #DDD9D5;border-left:4px solid #E8A847;border-radius:12px;padding:16px 20px;margin-bottom:20px;font-size:15px;line-height:1.55}
 .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
-.kpi-card{background:#fff;border:1px solid #DDD9D5;border-radius:12px;padding:14px 16px}
+.kpi-card{background:#fff;border:1px solid #DDD9D5;border-radius:12px;padding:14px 16px;cursor:default}
 .kpi-v{font-size:22px;font-weight:500}
 .kpi-l{font-size:11px;color:#6B6866;text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+.kpi-hint{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;border:1px solid #C4B49A;color:#C4B49A;font-size:9px;font-weight:700;vertical-align:middle;margin-left:3px}
+/* ── verdict legend ── */
+.verdict-legend{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:16px;padding:10px 14px;background:#FAFAF8;border-radius:8px;border:1px solid #F0EDE9;font-size:12.5px;color:#4A4845}
+.vdot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle}
 
 /* ── docs ── */
 .docs-grid{display:grid;grid-template-columns:200px 1fr;gap:32px;align-items:start}
@@ -149,7 +153,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
 </svg></div>
     <nav class="topbar-nav">
       <button onclick="nav('home')" id="nav-home" class="active">Home</button>
-      <button onclick="nav('logs')" id="nav-logs">Logs <span style="font-size:11px;color:#8AB4D6">292</span></button>
+      <button onclick="nav('logs')" id="nav-logs">Logs <span style="font-size:11px;color:#8AB4D6">299</span></button>
       <button onclick="nav('report')" id="nav-report">Report</button>
       <button onclick="nav('docs')" id="nav-docs">Docs</button>
     </nav>
@@ -263,19 +267,19 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
 
   <div class="metrics-row">
     <div class="metric-card">
-      <div class="metric-num">292</div>
+      <div class="metric-num">299</div>
       <div class="metric-label">Trades logged</div>
     </div>
     <div class="metric-card">
-      <div class="metric-num">202</div>
+      <div class="metric-num">206</div>
       <div class="metric-label">Positions closed</div>
     </div>
     <div class="metric-card">
-      <div class="metric-num">100.0%</div>
+      <div class="metric-num">52.4%</div>
       <div class="metric-label">Self-deception index</div>
     </div>
     <div class="metric-card">
-      <div class="metric-num">33.5%</div>
+      <div class="metric-num">33.7%</div>
       <div class="metric-label">Overconfidence gap</div>
     </div>
   </div>
@@ -311,6 +315,62 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
           <th>Time</th><th>Side</th><th>Entry</th><th>Driver</th><th>Conf</th><th>Rationale</th><th>Result</th>
         </tr></thead>
         <tbody id="log-body"><tr>
+      <td class="td-mono">23 Jun, 16:57</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62377.9</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The market has overcorrected, creating a buying opportunity given the extremely oversold RSI and low Fear &amp; Greed index.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 16:55</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62312.9</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">58%</td>
+      <td class="td-rationale">The sharp price drop and extremely low RSI suggest the market is due for a bounce.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 16:53</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$62294.8</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">80%</td>
+      <td class="td-rationale">The current market conditions indicate a potential mean reversion setup, with the asset experiencing a sharp decline and an oversold RSI reading.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 16:50</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62202.0</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The extreme oversold condition and recent price drop make a mean reversion trade a likely opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 16:48</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62242.1</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">80%</td>
+      <td class="td-rationale">The current oversold conditions and significant 24h price drop suggest a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 16:46</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62256.1</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">Mean reversion is likely given the extreme oversold conditions and recent price drop, with a good chance of a bounce.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 16:44</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62285.1</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">Mean reversion is likely as the price has fallen sharply and the RSI is oversold, suggesting a potential bounce is due.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
       <td class="td-mono">23 Jun, 16:42</td>
       <td><span class="pill pill-long">LONG</span></td>
       <td class="td-mono">$62245.3</td>
@@ -1005,7 +1065,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
       <td><span class="driver-tag">mean_reversion</span></td>
       <td class="td-conf">70%</td>
       <td class="td-rationale">Market has overshot to the downside, RSI and recent return suggest a potential mean reversion opportunity.</td>
-      <td><span class="pill pill-open">open</span></td>
+      <td><span class="pill pill-loss">$-1</span></td>
     </tr><tr>
       <td class="td-mono">23 Jun, 12:55</td>
       <td><span class="pill pill-long">LONG</span></td>
@@ -1013,7 +1073,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
       <td><span class="driver-tag">mean_reversion</span></td>
       <td class="td-conf">65%</td>
       <td class="td-rationale">Market has dropped 3.3% in 24h, RSI is oversold, suggesting an opportunity for mean reversion.</td>
-      <td><span class="pill pill-open">open</span></td>
+      <td><span class="pill pill-loss">$-2</span></td>
     </tr><tr>
       <td class="td-mono">23 Jun, 12:52</td>
       <td><span class="pill pill-short">SHORT</span></td>
@@ -1021,7 +1081,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
       <td><span class="driver-tag">momentum_breakout</span></td>
       <td class="td-conf">80%</td>
       <td class="td-rationale">The recent decline in price and negative 24h return suggest the market has broken out of its upward momentum.</td>
-      <td><span class="pill pill-open">open</span></td>
+      <td><span class="pill pill-win">+$2</span></td>
     </tr><tr>
       <td class="td-mono">23 Jun, 12:43</td>
       <td><span class="pill pill-long">LONG</span></td>
@@ -1029,7 +1089,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
       <td><span class="driver-tag">mean_reversion</span></td>
       <td class="td-conf">70%</td>
       <td class="td-rationale">The market has recently oversold, with RSI at a low and a brief 24h drop, suggesting a potential mean reversion</td>
-      <td><span class="pill pill-open">open</span></td>
+      <td><span class="pill pill-loss">$-4</span></td>
     </tr><tr>
       <td class="td-mono">23 Jun, 12:41</td>
       <td><span class="pill pill-long">LONG</span></td>
@@ -2658,77 +2718,95 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
     <p>The engine's verdict on whether the agent's stated reasoning actually explains its results.</p>
   </div>
   
-  <div class="verdict-banner">The agent's most-cited reason &quot;momentum_breakout&quot; is decorative (44% win vs 34% baseline). Its PnL is really driven by &quot;btc24hReturn&quot; (corr 0.77).</div>
+  <div class="verdict-banner">Top real driver of PnL: &quot;btc24hReturn&quot; (corr 0.76).</div>
   <div class="kpi-row">
-    <div class="kpi-card"><div class="kpi-v">202</div><div class="kpi-l">Trades</div></div>
-    <div class="kpi-card"><div class="kpi-v">39.1%</div><div class="kpi-l">Win rate</div></div>
-    <div class="kpi-card"><div class="kpi-v">100.0%</div><div class="kpi-l">Self-deception</div></div>
-    <div class="kpi-card"><div class="kpi-v">33.5%</div><div class="kpi-l">Overconfidence</div></div>
+    <div class="kpi-card">
+      <div class="kpi-v">206</div>
+      <div class="kpi-l">Trades analyzed</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-v">38.8%</div>
+      <div class="kpi-l">Overall win rate</div>
+    </div>
+    <div class="kpi-card" title="% of stated reasons that were decorative or harmful — 0% is perfect honesty, 100% means nothing the agent said was true">
+      <div class="kpi-v">52.4%</div>
+      <div class="kpi-l">Self-deception index <span class="kpi-hint">?</span></div>
+    </div>
+    <div class="kpi-card" title="Average gap between stated confidence and actual win rate — e.g. said 80% confident, won 51% of the time = 29pp gap">
+      <div class="kpi-v">33.7%</div>
+      <div class="kpi-l">Overconfidence gap <span class="kpi-hint">?</span></div>
+    </div>
   </div>
   <div class="card">
-    <h3>What actually drove PnL</h3>
-    <p class="card-sub">Correlation of each objective market feature with realized PnL.</p>
-    <table><thead><tr><th>Feature</th><th class="td-num">Corr</th><th>Strength</th></tr></thead><tbody><tr><td>btc24hReturn</td><td class="td-num">0.77</td>
-      <td class="td-bar"><span style="width:76.62461814133253%;background:#8AB4D6;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>btc1hReturn</td><td class="td-num">0.57</td>
-      <td class="td-bar"><span style="width:56.85443291412634%;background:#8AB4D6;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>fundingRate</td><td class="td-num">-0.03</td>
-      <td class="td-bar"><span style="width:2.707128307763337%;background:#E07070;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>fearGreed</td><td class="td-num">-0.02</td>
-      <td class="td-bar"><span style="width:2.477551679904556%;background:#E07070;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>rsi14</td><td class="td-num">-0.02</td>
-      <td class="td-bar"><span style="width:2.386066512280418%;background:#E07070;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>volatility</td><td class="td-num">0.00</td>
-      <td class="td-bar"><span style="width:0.1116413628570698%;background:#8AB4D6;display:block;height:8px;border-radius:4px"></span></td></tr></tbody></table>
+    <h3>What actually moved the PnL?</h3>
+    <p class="card-sub">The strongest predictor of the agent's profits was <strong>btc24hReturn</strong> (correlation 0.76). Blue bars = this feature predicted wins. Red bars = this feature predicted losses. A correlation near 0 means no relationship.</p>
+    <table><thead><tr><th>Market feature</th><th class="td-num">Correlation with profit</th><th style="width:36%">Strength &amp; direction</th></tr></thead><tbody><tr><td>btc24hReturn</td><td class="td-num">0.76</td>
+      <td class="td-bar"><span style="width:75.96607564344245%;background:#8AB4D6;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>btc1hReturn</td><td class="td-num">0.57</td>
+      <td class="td-bar"><span style="width:56.75985267937496%;background:#8AB4D6;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>fundingRate</td><td class="td-num">-0.03</td>
+      <td class="td-bar"><span style="width:2.7062940198034333%;background:#E07070;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>fearGreed</td><td class="td-num">-0.03</td>
+      <td class="td-bar"><span style="width:2.502242586984295%;background:#E07070;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>rsi14</td><td class="td-num">-0.02</td>
+      <td class="td-bar"><span style="width:2.3966226684503784%;background:#E07070;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>volatility</td><td class="td-num">0.00</td>
+      <td class="td-bar"><span style="width:0.13060856413188096%;background:#8AB4D6;display:block;height:8px;border-radius:4px"></span></td></tr></tbody></table>
   </div>
   <div class="card">
-    <h3>Are the stated reasons real?</h3>
-    <p class="card-sub">When the agent cited each driver, did those trades beat its baseline? "Decorative" means the reason was a story, not an edge.</p>
-    <table><thead><tr><th>Driver</th><th class="td-num">Cited</th><th class="td-num">Win%</th><th class="td-num">Base%</th><th class="td-num">Edge</th><th>Verdict</th><th>Sample quote</th></tr></thead><tbody><tr>
-    <td>momentum_breakout</td>
-    <td class="td-num">97</td>
-    <td class="td-num">44.3%</td>
-    <td class="td-num">34.3%</td>
-    <td class="td-num">10.0pp</td>
-    <td><span class="pill" style="background:#E8A847;color:#fff;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600">decorative</span></td>
+    <h3>Were the stated reasons real?</h3>
+    <p class="card-sub">For each reason the agent cited, we compare its win rate on those trades against the agent's average (baseline). If the win rate is no better — or worse — the stated reason was not a real edge.</p>
+    <div class="verdict-legend">
+    <span><span class="vdot" style="background:#72BFA2"></span>real edge — this reason genuinely predicted wins</span>
+    <span><span class="vdot" style="background:#E8A847"></span>decorative — cited often but made no difference</span>
+    <span><span class="vdot" style="background:#E07070"></span>harmful — trades where this was cited performed worse</span>
+    <span><span class="vdot" style="background:#C4B49A"></span>insufficient data — too few trades to be sure</span>
+  </div>
+    <table><thead><tr><th>Stated reason</th><th class="td-num">Times cited</th><th class="td-num">Win rate when cited</th><th class="td-num">Agent baseline</th><th class="td-num">Difference</th><th>Verdict</th><th>Agent's own words</th></tr></thead><tbody><tr>
+    <td><code class="driver-tag">momentum_breakout</code></td>
+    <td class="td-num">98×</td>
+    <td class="td-num">44.9%</td>
+    <td class="td-num">33.3%</td>
+    <td class="td-num" style="color:#3A9E6E;font-weight:600">+11.6pp</td>
+    <td><span class="pill" style="background:#72BFA2;color:#fff;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600">real edge</span></td>
     <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
   </tr><tr>
-    <td>mean_reversion</td>
-    <td class="td-num">61</td>
-    <td class="td-num">24.6%</td>
-    <td class="td-num">45.4%</td>
-    <td class="td-num">-20.8pp</td>
+    <td><code class="driver-tag">mean_reversion</code></td>
+    <td class="td-num">64×</td>
+    <td class="td-num">23.4%</td>
+    <td class="td-num">45.8%</td>
+    <td class="td-num" style="color:#C45050;font-weight:600">-22.3pp</td>
     <td><span class="pill" style="background:#E07070;color:#fff;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600">harmful</span></td>
     <td class="td-rationale">Buying mean reversion: 1h momentum -0.69%, RSI 14. Expecting continuation.</td>
   </tr><tr>
-    <td>trend_follow</td>
-    <td class="td-num">22</td>
+    <td><code class="driver-tag">trend_follow</code></td>
+    <td class="td-num">22×</td>
     <td class="td-num">45.5%</td>
-    <td class="td-num">38.3%</td>
-    <td class="td-num">7.1pp</td>
+    <td class="td-num">38.0%</td>
+    <td class="td-num" style="color:#3A9E6E;font-weight:600">+7.4pp</td>
     <td><span class="pill" style="background:#E8A847;color:#fff;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600">decorative</span></td>
     <td class="td-rationale">Trend and positioning support staying with the move.</td>
   </tr><tr>
-    <td>funding_signal</td>
-    <td class="td-num">22</td>
+    <td><code class="driver-tag">funding_signal</code></td>
+    <td class="td-num">22×</td>
     <td class="td-num">50.0%</td>
-    <td class="td-num">37.8%</td>
-    <td class="td-num">12.2pp</td>
+    <td class="td-num">37.5%</td>
+    <td class="td-num" style="color:#3A9E6E;font-weight:600">+12.5pp</td>
     <td><span class="pill" style="background:#E8A847;color:#fff;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600">decorative</span></td>
     <td class="td-rationale">Trend and positioning support staying with the move.</td>
   </tr></tbody></table>
   </div>
   <div class="card">
-    <h3>Confidence calibration</h3>
-    <p class="card-sub">When the agent was confident, did it actually win more?</p>
-    <table><thead><tr><th>Confidence</th><th class="td-num">Trades</th><th class="td-num">Said</th><th class="td-num">Won</th><th class="td-num">Gap</th></tr></thead><tbody><tr><td>0.0-0.6</td><td class="td-num">16</td>
+    <h3>Did confidence actually mean anything?</h3>
+    <p class="card-sub">A well-calibrated agent should win ~80% of trades when it says it is 80% confident. A positive gap means it was overconfident — it said a higher number than it deserved.</p>
+    <table><thead><tr><th>Confidence bucket</th><th class="td-num">Trades</th><th class="td-num">Agent said</th><th class="td-num">Actually won</th><th class="td-num">Gap (overconfidence)</th></tr></thead><tbody><tr><td>0.0-0.6</td><td class="td-num">16</td>
       <td class="td-num">56.3%</td>
       <td class="td-num">50.0%</td>
-      <td class="td-num" style="color:#6B6866">6.3pp</td></tr><tr><td>0.6-0.75</td><td class="td-num">112</td>
+      <td class="td-num" style="color:#3A9E6E;font-weight:400">+6.3pp</td></tr><tr><td>0.6-0.75</td><td class="td-num">115</td>
       <td class="td-num">66.8%</td>
-      <td class="td-num">34.8%</td>
-      <td class="td-num" style="color:#E07070">32.0pp ⚠</td></tr><tr><td>0.75-0.9</td><td class="td-num">53</td>
+      <td class="td-num">33.9%</td>
+      <td class="td-num" style="color:#E07070;font-weight:600">+32.9pp ← overconfident</td></tr><tr><td>0.75-0.9</td><td class="td-num">54</td>
       <td class="td-num">81.4%</td>
-      <td class="td-num">52.8%</td>
-      <td class="td-num" style="color:#E07070">28.6pp ⚠</td></tr><tr><td>0.9-1.0</td><td class="td-num">21</td>
+      <td class="td-num">53.7%</td>
+      <td class="td-num" style="color:#E07070;font-weight:600">+27.7pp ← overconfident</td></tr><tr><td>0.9-1.0</td><td class="td-num">21</td>
       <td class="td-num">93.5%</td>
       <td class="td-num">19.0%</td>
-      <td class="td-num" style="color:#E07070">74.4pp ⚠</td></tr></tbody></table>
+      <td class="td-num" style="color:#E07070;font-weight:600">+74.4pp ← overconfident</td></tr></tbody></table>
   </div>
 </section>
     

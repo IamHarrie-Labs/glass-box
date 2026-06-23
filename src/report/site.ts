@@ -230,50 +230,81 @@ const LOGS = `
 // ── section: report ───────────────────────────────────────────────────────────
 function buildReport(): string {
   if (!report) return `<div class="card empty-card"><p>No autopsy data yet. Run <code>npm run autopsy</code> first.</p></div>`;
+  // find the strongest real driver for a plain-English summary
+  const topAttr = report.attribution[0];
+  const attrSummary = topAttr
+    ? `The strongest predictor of the agent's profits was <strong>${topAttr.feature}</strong> (correlation ${topAttr.correlationWithPnl.toFixed(2)}). Blue bars = this feature predicted wins. Red bars = this feature predicted losses. A correlation near 0 means no relationship.`
+    : "";
   const attrRows = report.attribution.map(a => {
     const w = Math.abs(a.correlationWithPnl) * 100;
     const col = a.correlationWithPnl >= 0 ? "#8AB4D6" : "#E07070";
     return `<tr><td>${a.feature}</td><td class="td-num">${a.correlationWithPnl.toFixed(2)}</td>
       <td class="td-bar"><span style="width:${w}%;background:${col};display:block;height:8px;border-radius:4px"></span></td></tr>`;
   }).join("");
-  const driverRows = report.drivers.map(d => `<tr>
-    <td>${d.driver}</td>
-    <td class="td-num">${d.timesCited}</td>
+
+  const verdictLegend = `<div class="verdict-legend">
+    <span><span class="vdot" style="background:#72BFA2"></span>real edge — this reason genuinely predicted wins</span>
+    <span><span class="vdot" style="background:#E8A847"></span>decorative — cited often but made no difference</span>
+    <span><span class="vdot" style="background:#E07070"></span>harmful — trades where this was cited performed worse</span>
+    <span><span class="vdot" style="background:#C4B49A"></span>insufficient data — too few trades to be sure</span>
+  </div>`;
+  const driverRows = report.drivers.map(d => {
+    const edgePp = (d.edge * 100).toFixed(1);
+    const edgeColor = d.edge > 0.02 ? "#3A9E6E" : d.edge < -0.02 ? "#C45050" : "#6B6866";
+    return `<tr>
+    <td><code class="driver-tag">${d.driver}</code></td>
+    <td class="td-num">${d.timesCited}×</td>
     <td class="td-num">${pct(d.winRateWhenCited)}</td>
     <td class="td-num">${pct(d.baselineWinRate)}</td>
-    <td class="td-num">${(d.edge * 100).toFixed(1)}pp</td>
-    <td><span class="pill" style="background:${verdictColor[d.verdict]};color:#fff;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600">${d.verdict.replace("_"," ")}</span></td>
-    <td class="td-rationale">${esc(d.sampleRationale ?? "")}</td>
-  </tr>`).join("");
+    <td class="td-num" style="color:${edgeColor};font-weight:600">${d.edge >= 0 ? "+" : ""}${edgePp}pp</td>
+    <td><span class="pill" style="background:${verdictColor[d.verdict]};color:#fff;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600">${d.verdict.replace(/_/g," ")}</span></td>
+    <td class="td-rationale">${esc(d.sampleRationale ?? "—")}</td>
+  </tr>`;
+  }).join("");
+
   const calRows = report.calibration.map(c => {
     const over = c.gap > 0.1;
     return `<tr><td>${c.label}</td><td class="td-num">${c.trades}</td>
       <td class="td-num">${pct(c.avgConfidence)}</td>
       <td class="td-num">${pct(c.actualWinRate)}</td>
-      <td class="td-num" style="color:${over?"#E07070":"#6B6866"}">${(c.gap*100).toFixed(1)}pp${over?" ⚠":""}</td></tr>`;
+      <td class="td-num" style="color:${over?"#E07070":"#3A9E6E"};font-weight:${over?600:400}">${c.gap > 0 ? "+" : ""}${(c.gap*100).toFixed(1)}pp${over?" ← overconfident":""}</td></tr>`;
   }).join("");
+
   return `
   <div class="verdict-banner">${esc(report.headline)}</div>
   <div class="kpi-row">
-    <div class="kpi-card"><div class="kpi-v">${report.totalTrades}</div><div class="kpi-l">Trades</div></div>
-    <div class="kpi-card"><div class="kpi-v">${pct(report.overallWinRate)}</div><div class="kpi-l">Win rate</div></div>
-    <div class="kpi-card"><div class="kpi-v">${pct(report.selfDeceptionIndex)}</div><div class="kpi-l">Self-deception</div></div>
-    <div class="kpi-card"><div class="kpi-v">${pct(report.overconfidenceGap)}</div><div class="kpi-l">Overconfidence</div></div>
+    <div class="kpi-card">
+      <div class="kpi-v">${report.totalTrades}</div>
+      <div class="kpi-l">Trades analyzed</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-v">${pct(report.overallWinRate)}</div>
+      <div class="kpi-l">Overall win rate</div>
+    </div>
+    <div class="kpi-card" title="% of stated reasons that were decorative or harmful — 0% is perfect honesty, 100% means nothing the agent said was true">
+      <div class="kpi-v">${pct(report.selfDeceptionIndex)}</div>
+      <div class="kpi-l">Self-deception index <span class="kpi-hint">?</span></div>
+    </div>
+    <div class="kpi-card" title="Average gap between stated confidence and actual win rate — e.g. said 80% confident, won 51% of the time = 29pp gap">
+      <div class="kpi-v">${pct(report.overconfidenceGap)}</div>
+      <div class="kpi-l">Overconfidence gap <span class="kpi-hint">?</span></div>
+    </div>
   </div>
   <div class="card">
-    <h3>What actually drove PnL</h3>
-    <p class="card-sub">Correlation of each objective market feature with realized PnL.</p>
-    <table><thead><tr><th>Feature</th><th class="td-num">Corr</th><th>Strength</th></tr></thead><tbody>${attrRows}</tbody></table>
+    <h3>What actually moved the PnL?</h3>
+    <p class="card-sub">${attrSummary}</p>
+    <table><thead><tr><th>Market feature</th><th class="td-num">Correlation with profit</th><th style="width:36%">Strength &amp; direction</th></tr></thead><tbody>${attrRows}</tbody></table>
   </div>
   <div class="card">
-    <h3>Are the stated reasons real?</h3>
-    <p class="card-sub">When the agent cited each driver, did those trades beat its baseline? "Decorative" means the reason was a story, not an edge.</p>
-    <table><thead><tr><th>Driver</th><th class="td-num">Cited</th><th class="td-num">Win%</th><th class="td-num">Base%</th><th class="td-num">Edge</th><th>Verdict</th><th>Sample quote</th></tr></thead><tbody>${driverRows}</tbody></table>
+    <h3>Were the stated reasons real?</h3>
+    <p class="card-sub">For each reason the agent cited, we compare its win rate on those trades against the agent's average (baseline). If the win rate is no better — or worse — the stated reason was not a real edge.</p>
+    ${verdictLegend}
+    <table><thead><tr><th>Stated reason</th><th class="td-num">Times cited</th><th class="td-num">Win rate when cited</th><th class="td-num">Agent baseline</th><th class="td-num">Difference</th><th>Verdict</th><th>Agent's own words</th></tr></thead><tbody>${driverRows}</tbody></table>
   </div>
   <div class="card">
-    <h3>Confidence calibration</h3>
-    <p class="card-sub">When the agent was confident, did it actually win more?</p>
-    <table><thead><tr><th>Confidence</th><th class="td-num">Trades</th><th class="td-num">Said</th><th class="td-num">Won</th><th class="td-num">Gap</th></tr></thead><tbody>${calRows}</tbody></table>
+    <h3>Did confidence actually mean anything?</h3>
+    <p class="card-sub">A well-calibrated agent should win ~80% of trades when it says it is 80% confident. A positive gap means it was overconfident — it said a higher number than it deserved.</p>
+    <table><thead><tr><th>Confidence bucket</th><th class="td-num">Trades</th><th class="td-num">Agent said</th><th class="td-num">Actually won</th><th class="td-num">Gap (overconfidence)</th></tr></thead><tbody>${calRows}</tbody></table>
   </div>`;
 }
 
@@ -537,9 +568,13 @@ tr:hover td{background:#FAFAF8}
 /* ── verdict banner ── */
 .verdict-banner{background:#fff;border:1px solid #DDD9D5;border-left:4px solid #E8A847;border-radius:12px;padding:16px 20px;margin-bottom:20px;font-size:15px;line-height:1.55}
 .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
-.kpi-card{background:#fff;border:1px solid #DDD9D5;border-radius:12px;padding:14px 16px}
+.kpi-card{background:#fff;border:1px solid #DDD9D5;border-radius:12px;padding:14px 16px;cursor:default}
 .kpi-v{font-size:22px;font-weight:500}
 .kpi-l{font-size:11px;color:#6B6866;text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+.kpi-hint{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;border:1px solid #C4B49A;color:#C4B49A;font-size:9px;font-weight:700;vertical-align:middle;margin-left:3px}
+/* ── verdict legend ── */
+.verdict-legend{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:16px;padding:10px 14px;background:#FAFAF8;border-radius:8px;border:1px solid #F0EDE9;font-size:12.5px;color:#4A4845}
+.vdot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle}
 
 /* ── docs ── */
 .docs-grid{display:grid;grid-template-columns:200px 1fr;gap:32px;align-items:start}

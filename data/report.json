@@ -1,55 +1,55 @@
 {
-  "totalTrades": 202,
-  "overallWinRate": 0.3910891089108911,
-  "totalPnlUsd": -79.34000000000012,
+  "totalTrades": 206,
+  "overallWinRate": 0.3883495145631068,
+  "totalPnlUsd": -84.70000000000012,
   "attribution": [
     {
       "feature": "btc24hReturn",
-      "correlationWithPnl": 0.7662461814133253
+      "correlationWithPnl": 0.7596607564344245
     },
     {
       "feature": "btc1hReturn",
-      "correlationWithPnl": 0.5685443291412634
+      "correlationWithPnl": 0.5675985267937496
     },
     {
       "feature": "fundingRate",
-      "correlationWithPnl": -0.02707128307763337
+      "correlationWithPnl": -0.027062940198034333
     },
     {
       "feature": "fearGreed",
-      "correlationWithPnl": -0.02477551679904556
+      "correlationWithPnl": -0.02502242586984295
     },
     {
       "feature": "rsi14",
-      "correlationWithPnl": -0.02386066512280418
+      "correlationWithPnl": -0.023966226684503784
     },
     {
       "feature": "volatility",
-      "correlationWithPnl": 0.001116413628570698
+      "correlationWithPnl": 0.0013060856413188095
     }
   ],
   "hiddenDriver": {
     "feature": "btc24hReturn",
-    "correlationWithPnl": 0.7662461814133253
+    "correlationWithPnl": 0.7596607564344245
   },
   "drivers": [
     {
       "driver": "momentum_breakout",
-      "timesCited": 97,
-      "winRateWhenCited": 0.44329896907216493,
-      "baselineWinRate": 0.34285714285714286,
-      "edge": 0.10044182621502207,
-      "tStat": 1.4593489417171635,
-      "verdict": "decorative",
+      "timesCited": 98,
+      "winRateWhenCited": 0.4489795918367347,
+      "baselineWinRate": 0.3333333333333333,
+      "edge": 0.11564625850340138,
+      "tStat": 1.7000687969305683,
+      "verdict": "real_edge",
       "sampleRationale": "Price cleared the 4h range on rising volume; expecting continuation."
     },
     {
       "driver": "mean_reversion",
-      "timesCited": 61,
-      "winRateWhenCited": 0.2459016393442623,
-      "baselineWinRate": 0.45390070921985815,
-      "edge": -0.20799906987559585,
-      "tStat": -2.9832801459854643,
+      "timesCited": 64,
+      "winRateWhenCited": 0.234375,
+      "baselineWinRate": 0.45774647887323944,
+      "edge": -0.22337147887323944,
+      "tStat": -3.290324601382105,
       "verdict": "harmful",
       "sampleRationale": "Buying mean reversion: 1h momentum -0.69%, RSI 14. Expecting continuation."
     },
@@ -57,9 +57,9 @@
       "driver": "trend_follow",
       "timesCited": 22,
       "winRateWhenCited": 0.45454545454545453,
-      "baselineWinRate": 0.38333333333333336,
-      "edge": 0.07121212121212117,
-      "tStat": 0.621543384608876,
+      "baselineWinRate": 0.3804347826086957,
+      "edge": 0.07411067193675885,
+      "tStat": 0.6476469760044107,
       "verdict": "decorative",
       "sampleRationale": "Trend and positioning support staying with the move."
     },
@@ -67,14 +67,14 @@
       "driver": "funding_signal",
       "timesCited": 22,
       "winRateWhenCited": 0.5,
-      "baselineWinRate": 0.37777777777777777,
-      "edge": 0.12222222222222223,
-      "tStat": 1.0630850875957334,
+      "baselineWinRate": 0.375,
+      "edge": 0.125,
+      "tStat": 1.088583426311784,
       "verdict": "decorative",
       "sampleRationale": "Trend and positioning support staying with the move."
     }
   ],
-  "selfDeceptionIndex": 1,
+  "selfDeceptionIndex": 0.5242718446601942,
   "calibration": [
     {
       "label": "0.0-0.6",
@@ -85,17 +85,17 @@
     },
     {
       "label": "0.6-0.75",
-      "trades": 112,
-      "avgConfidence": 0.6677678571428574,
-      "actualWinRate": 0.3482142857142857,
-      "gap": 0.31955357142857166
+      "trades": 115,
+      "avgConfidence": 0.6681739130434785,
+      "actualWinRate": 0.3391304347826087,
+      "gap": 0.3290434782608698
     },
     {
       "label": "0.75-0.9",
-      "trades": 53,
-      "avgConfidence": 0.8143396226415094,
-      "actualWinRate": 0.5283018867924528,
-      "gap": 0.28603773584905656
+      "trades": 54,
+      "avgConfidence": 0.814074074074074,
+      "actualWinRate": 0.5370370370370371,
+      "gap": 0.27703703703703686
     },
     {
       "label": "0.9-1.0",
@@ -105,6 +105,6 @@
       "gap": 0.7442857142857141
     }
   ],
-  "overconfidenceGap": 0.33455445544554374,
-  "headline": "The agent's most-cited reason \"momentum_breakout\" is decorative (44% win vs 34% baseline). Its PnL is really driven by \"btc24hReturn\" (corr 0.77)."
+  "overconfidenceGap": 0.33703883495145553,
+  "headline": "Top real driver of PnL: \"btc24hReturn\" (corr 0.76)."
 }
