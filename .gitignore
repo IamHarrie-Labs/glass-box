@@ -3,3 +3,5 @@ node_modules/
 .env
 # NOTE: data/ is intentionally NOT ignored — the trade log is the
 # "verifiable usage record" judges want to see committed.
+
+.vercel

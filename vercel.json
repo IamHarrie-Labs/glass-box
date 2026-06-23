@@ -1,0 +1,6 @@
+{
+  "name": "tryglassbox",
+  "buildCommand": "npm run site",
+  "outputDirectory": "docs",
+  "installCommand": "npm install"
+}

@@ -49,6 +49,12 @@ Everything gets compiled into a self-contained HTML report. Judges open one file
 
 ---
 
+## Deployment link
+
+https://tryglassbox.vercel.app
+
+---
+
 ## Part 3: How it works
 
 The stack is TypeScript and Node.js 24, with zero runtime dependencies. It runs anywhere Node is installed.
