@@ -623,6 +623,8 @@ document.querySelectorAll('.docs-link').forEach(link => {
 </body>
 </html>`;
 
-writeFileSync("data/index.html", HTML, "utf8");
-console.log(`Wrote data/index.html (${trades.length} trades embedded, report: ${report ? "yes" : "no data yet"})`);
-console.log("Open data/index.html in a browser.");
+import { mkdirSync } from "node:fs";
+mkdirSync("docs", { recursive: true });
+writeFileSync("docs/index.html", HTML, "utf8");
+console.log(`Wrote docs/index.html (${trades.length} trades embedded, report: ${report ? "yes" : "no data yet"})`);
+console.log("Open docs/index.html in a browser.");

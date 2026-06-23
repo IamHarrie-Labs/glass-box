@@ -27,11 +27,16 @@ function run(cmd: string) {
 
 function push() {
   if (!existsSync("data/trades.jsonl")) return;
+
+  // rebuild autopsy + site so GitHub Pages always has fresh data
+  run(`npx tsx src/engine/run.ts`);
+  run(`npx tsx src/report/site.ts`);
+
   const remote = `https://x-access-token:${TOKEN}@github.com/${REPO}.git`;
   run(`git config user.email "agent@glassbox"`);
   run(`git config user.name "Glass Box Agent"`);
   run(`git remote set-url origin ${remote}`);
-  run(`git add data/trades.jsonl data/report.json`);
+  run(`git add data/trades.jsonl data/report.json docs/index.html`);
   const changed = run(`git diff --cached --quiet`) === false;
   if (!changed) { console.log(`[push] no changes`); return; }
   const ts = new Date().toISOString().slice(0,16).replace("T"," ");

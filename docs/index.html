@@ -1,0 +1,2681 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Glass Box · Agent Autopsy Engine</title>
+<style>
+/* ── reset + base ── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#EDECEA;color:#1A1A1A;font:15px/1.6 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;min-height:100vh}
+a{color:inherit;text-decoration:none}
+code,pre{font-family:ui-monospace,"Cascadia Code","Fira Code",monospace}
+
+/* ── layout ── */
+.shell{display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:#fff;border-bottom:1px solid #DDD9D5;padding:0 32px;display:flex;align-items:center;gap:32px;height:56px;position:sticky;top:0;z-index:100}
+.topbar-logo{display:flex;align-items:center;flex-shrink:0}
+.topbar-nav{display:flex;gap:4px;flex:1}
+.topbar-nav button{background:none;border:none;padding:6px 14px;border-radius:8px;font:14px/1 inherit;color:#6B6866;cursor:pointer;transition:background .15s,color .15s}
+.topbar-nav button:hover{background:#F4F2EF;color:#1A1A1A}
+.topbar-nav button.active{background:#F4F2EF;color:#1A1A1A;font-weight:500}
+.main{flex:1;padding:40px 32px;max-width:1100px;margin:0 auto;width:100%}
+
+/* ── pages ── */
+.page{display:none}.page.active{display:block}
+
+/* ── hero ── */
+.hero{text-align:center;padding:56px 0 48px;max-width:680px;margin:0 auto}
+.hero-tag{display:inline-block;background:#fff;border:1px solid #DDD9D5;border-radius:99px;padding:4px 14px;font-size:12px;color:#6B6866;letter-spacing:.02em;margin-bottom:20px}
+.hero-title{font-size:36px;font-weight:300;line-height:1.25;letter-spacing:-.5px;margin-bottom:16px}
+.hero-title em{font-style:italic;font-weight:400}
+.hero-sub{color:#6B6866;font-size:16px;line-height:1.65;margin-bottom:28px}
+.hero-btns{display:flex;gap:12px;justify-content:center}
+.btn-primary{background:#1A1A1A;color:#fff;border:none;padding:10px 22px;border-radius:8px;font:14px/1 inherit;font-weight:500;cursor:pointer;transition:opacity .15s}
+.btn-primary:hover{opacity:.82}
+.btn-ghost{background:#fff;color:#1A1A1A;border:1px solid #DDD9D5;padding:10px 22px;border-radius:8px;font:14px/1 inherit;cursor:pointer;transition:background .15s}
+.btn-ghost:hover{background:#F4F2EF}
+
+/* ── flow diagram ── */
+.flow-section{margin-bottom:48px}
+.section-title{font-size:20px;font-weight:500;text-align:center;margin-bottom:6px}
+.section-sub{color:#6B6866;text-align:center;margin-bottom:32px}
+.flow-cols{display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:780px;margin:0 auto}
+.flow-col-label{font-size:13px;font-weight:600;color:#6B6866;text-align:center;margin-bottom:12px;letter-spacing:.03em;text-transform:uppercase}
+.flow-step{background:#fff;border:1px solid #DDD9D5;border-radius:12px;padding:14px 16px;display:flex;gap:14px;align-items:flex-start}
+.step-icon{width:28px;height:28px;border-radius:50%;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0;margin-top:1px}
+.step-title{font-weight:500;font-size:14px;margin-bottom:2px}
+.step-body{font-size:13px;color:#6B6866;line-height:1.5}
+.step-tan .step-icon{color:#C4B49A;border-color:#C4B49A}
+.step-tan{border-left:3px solid #C4B49A}
+.step-amber .step-icon{color:#E8A847;border-color:#E8A847}
+.step-amber{border-left:3px solid #E8A847;background:#FFFBF2}
+.step-blue .step-icon{color:#8AB4D6;border-color:#8AB4D6}
+.step-blue{border-left:3px solid #8AB4D6;background:#F4F8FD}
+.step-teal .step-icon{color:#72BFA2;border-color:#72BFA2}
+.step-teal{border-left:3px solid #72BFA2;background:#F2FBF7}
+.step-red .step-icon{color:#E07070;border-color:#E07070}
+.step-red{border-left:3px solid #E07070;background:#FDF4F4}
+.flow-arrow{text-align:center;color:#C4B49A;font-size:18px;margin:6px 0}
+
+/* ── metrics ── */
+.metrics-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:40px}
+.metric-card{background:#fff;border:1px solid #DDD9D5;border-radius:12px;padding:18px 20px}
+.metric-num{font-size:28px;font-weight:300;letter-spacing:-.5px}
+.metric-label{font-size:12px;color:#6B6866;text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+
+/* ── page header ── */
+.page-header{margin-bottom:28px}
+.page-header h2{font-size:22px;font-weight:500;margin-bottom:4px}
+.page-header p{color:#6B6866}
+
+/* ── cards ── */
+.card{background:#fff;border:1px solid #DDD9D5;border-radius:12px;padding:20px 24px;margin-bottom:18px}
+.card h3{font-size:15px;font-weight:600;margin-bottom:4px}
+.card-sub{color:#6B6866;font-size:13px;margin-bottom:14px}
+.empty-card{color:#6B6866;text-align:center;padding:40px}
+
+/* ── tables ── */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid #F0EDE9;font-size:13.5px}
+th{color:#6B6866;font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;background:#FAFAF8}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#FAFAF8}
+.td-num{text-align:right;font-variant-numeric:tabular-nums}
+.td-bar{width:36%}
+.td-conf{text-align:right;font-variant-numeric:tabular-nums;color:#6B6866}
+.td-rationale{color:#6B6866;max-width:320px;font-size:12.5px;line-height:1.45}
+.td-mono{font-family:ui-monospace,monospace;font-size:12px;color:#6B6866;white-space:nowrap}
+.empty{text-align:center;color:#6B6866;padding:32px}
+
+/* ── pills ── */
+.pill{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11.5px;font-weight:600}
+.pill-long{background:#EEF6FF;color:#4A90C4}
+.pill-short{background:#FEF3F3;color:#C45050}
+.pill-open{background:#F4F2EF;color:#6B6866}
+.pill-win{background:#F0FBF5;color:#3A9E6E}
+.pill-loss{background:#FEF3F3;color:#C45050}
+.driver-tag{display:inline-block;background:#F4F2EF;color:#4A4845;padding:2px 8px;border-radius:6px;font-size:11.5px;font-family:ui-monospace,monospace}
+
+/* ── logs filters ── */
+.log-filters{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.log-filters input,.log-filters select{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:8px;padding:7px 12px;font:13px/1 inherit;color:#1A1A1A;outline:none}
+.log-filters input{flex:1;min-width:180px}
+.log-filters input:focus,.log-filters select:focus{border-color:#8AB4D6}
+
+/* ── verdict banner ── */
+.verdict-banner{background:#fff;border:1px solid #DDD9D5;border-left:4px solid #E8A847;border-radius:12px;padding:16px 20px;margin-bottom:20px;font-size:15px;line-height:1.55}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.kpi-card{background:#fff;border:1px solid #DDD9D5;border-radius:12px;padding:14px 16px}
+.kpi-v{font-size:22px;font-weight:500}
+.kpi-l{font-size:11px;color:#6B6866;text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+
+/* ── docs ── */
+.docs-grid{display:grid;grid-template-columns:200px 1fr;gap:32px;align-items:start}
+.docs-nav{background:#fff;border:1px solid #DDD9D5;border-radius:12px;padding:16px;position:sticky;top:72px}
+.docs-nav-group{font-size:11px;font-weight:600;color:#6B6866;text-transform:uppercase;letter-spacing:.06em;padding:8px 10px 4px}
+.docs-link{display:block;padding:7px 10px;border-radius:7px;font-size:13.5px;color:#4A4845;cursor:pointer}
+.docs-link:hover,.docs-link.active{background:#F4F2EF;color:#1A1A1A}
+.docs-section{margin-bottom:40px;scroll-margin-top:80px}
+.docs-section h3{font-size:17px;font-weight:600;margin-bottom:8px}
+.docs-section p{color:#4A4845;margin-bottom:12px;line-height:1.65}
+pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;overflow-x:auto;font-size:12.5px;line-height:1.6;margin-bottom:14px}
+.cmd-list{display:flex;flex-direction:column;gap:1px;border:1px solid #DDD9D5;border-radius:10px;overflow:hidden}
+.cmd-row{background:#fff;padding:14px 16px;display:grid;grid-template-columns:200px 1fr;gap:16px;font-size:13.5px}
+.cmd-row:not(:last-child){border-bottom:1px solid #F0EDE9}
+.cmd-name{font-weight:500}
+.cmd-desc{color:#6B6866;line-height:1.55}
+.driver-table{border:1px solid #DDD9D5;border-radius:10px;overflow:hidden}
+.driver-row{background:#fff;padding:11px 16px;display:grid;grid-template-columns:200px 1fr;gap:16px;font-size:13.5px}
+.driver-row:not(:last-child){border-bottom:1px solid #F0EDE9}
+.driver-row span{color:#6B6866}
+
+/* ── footer ── */
+.foot{border-top:1px solid #DDD9D5;padding:20px 32px;text-align:center;font-size:12px;color:#6B6866;background:#fff}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <div class="topbar-logo"><svg width="130" height="28" viewBox="0 0 130 28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Glass Box">
+  <!-- box icon: outer square + inner lens suggesting transparency -->
+  <rect x="1" y="4" width="20" height="20" rx="4" stroke="#8AB4D6" stroke-width="1.8" fill="none"/>
+  <circle cx="11" cy="14" r="4.5" stroke="#8AB4D6" stroke-width="1.5" fill="none"/>
+  <line x1="14.2" y1="17.2" x2="17.5" y2="20.5" stroke="#8AB4D6" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- wordmark -->
+  <text x="28" y="19" font-family="ui-sans-serif,system-ui,Segoe UI,Roboto,sans-serif" font-size="15" fill="#1A1A1A" font-weight="300" letter-spacing="-0.2">glass</text>
+  <text x="67" y="19" font-family="ui-sans-serif,system-ui,Segoe UI,Roboto,sans-serif" font-size="15" fill="#1A1A1A" font-weight="600" letter-spacing="-0.2">box</text>
+</svg></div>
+    <nav class="topbar-nav">
+      <button onclick="nav('home')" id="nav-home" class="active">Home</button>
+      <button onclick="nav('logs')" id="nav-logs">Logs <span style="font-size:11px;color:#8AB4D6">264</span></button>
+      <button onclick="nav('report')" id="nav-report">Report</button>
+      <button onclick="nav('docs')" id="nav-docs">Docs</button>
+    </nav>
+  </header>
+  <main class="main">
+    
+<section id="page-home" class="page active">
+  <div class="hero">
+    <div class="hero-tag">Track 2 · Trading Infra · Bitget AI Hackathon S1</div>
+    <h1 class="hero-title">Your agent sounds confident.<br>We check if it's right.</h1>
+    <p class="hero-sub">Glass Box measures the gap between what an LLM trading agent <em>says</em> drove its decision and what actually drove its PnL. We call that gap the Self-Deception Index.</p>
+    <div class="hero-btns">
+      <button class="btn-primary" onclick="nav('logs')">View live logs</button>
+      <button class="btn-ghost" onclick="nav('docs')">Read the docs</button>
+    </div>
+  </div>
+
+  <div class="flow-section">
+    <h2 class="section-title">How it works</h2>
+    <p class="section-sub">Two systems. One surfaces reasoning. The other audits it.</p>
+    <div class="flow-cols">
+
+      <div class="flow-col">
+        <div class="flow-col-label">Without Glass Box</div>
+        <div class="flow-step step-tan">
+          <div class="step-icon">?</div>
+          <div>
+            <div class="step-title">Agent trades</div>
+            <div class="step-body">Produces confident natural-language rationale per trade</div>
+          </div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-step step-amber">
+          <div class="step-icon">!</div>
+          <div>
+            <div class="step-title">Story is accepted</div>
+            <div class="step-body">"Going long — momentum breakout with bullish funding"</div>
+          </div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-step step-blue">
+          <div class="step-icon">≈</div>
+          <div>
+            <div class="step-title">No verification</div>
+            <div class="step-body">Nobody checks if that reason actually predicted the outcome</div>
+          </div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-step step-blue">
+          <div class="step-icon">↘</div>
+          <div>
+            <div class="step-title">Silent drift</div>
+            <div class="step-body">Agent keeps citing decorative reasons while losing on hidden drivers</div>
+          </div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-step step-red">
+          <div class="step-icon">✕</div>
+          <div>
+            <div class="step-title">No insight</div>
+            <div class="step-body">You only learn what went wrong after the losses add up</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-col">
+        <div class="flow-col-label" style="color:#8AB4D6">With Glass Box</div>
+        <div class="flow-step step-tan">
+          <div class="step-icon">?</div>
+          <div>
+            <div class="step-title">Agent trades</div>
+            <div class="step-body">Produces confident natural-language rationale per trade</div>
+          </div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-step step-amber">
+          <div class="step-icon">⬡</div>
+          <div>
+            <div class="step-title">Thesis locked</div>
+            <div class="step-body">Decision record written before outcome is known — agent cannot revise it</div>
+          </div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-step step-blue">
+          <div class="step-icon">⊕</div>
+          <div>
+            <div class="step-title">Autopsy engine runs</div>
+            <div class="step-body">Signal attribution · Self-deception detection · Confidence calibration</div>
+          </div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-step step-blue">
+          <div class="step-icon">◎</div>
+          <div>
+            <div class="step-title">Verdicts issued</div>
+            <div class="step-body">Each stated driver scored: real edge / decorative / harmful</div>
+          </div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-step step-teal">
+          <div class="step-icon">↺</div>
+          <div>
+            <div class="step-title">Agent improves</div>
+            <div class="step-body">Self-Deception Index tracked over time. Drift caught early.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="metrics-row">
+    <div class="metric-card">
+      <div class="metric-num">264</div>
+      <div class="metric-label">Trades logged</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-num">174</div>
+      <div class="metric-label">Positions closed</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-num">100.0%</div>
+      <div class="metric-label">Self-deception index</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-num">24.9%</div>
+      <div class="metric-label">Overconfidence gap</div>
+    </div>
+  </div>
+</section>
+    
+<section id="page-logs" class="page">
+  <div class="page-header">
+    <h2>Live trade log</h2>
+    <p>Every decision the agent made, with its stated thesis locked in before the outcome was known.</p>
+  </div>
+  <div class="card">
+    <div class="log-filters">
+      <input id="log-search" type="text" placeholder="Search rationale..." oninput="filterLogs()" />
+      <select id="log-driver" onchange="filterLogs()">
+        <option value="">All drivers</option>
+        <option>momentum_breakout</option>
+        <option>mean_reversion</option>
+        <option>trend_follow</option>
+        <option>sentiment_extreme</option>
+        <option>funding_signal</option>
+        <option>breakdown_short</option>
+        <option>news_catalyst</option>
+      </select>
+      <select id="log-side" onchange="filterLogs()">
+        <option value="">Both sides</option>
+        <option value="long">Long only</option>
+        <option value="short">Short only</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table id="log-table">
+        <thead><tr>
+          <th>Time</th><th>Side</th><th>Entry</th><th>Driver</th><th>Conf</th><th>Rationale</th><th>Result</th>
+        </tr></thead>
+        <tbody id="log-body"><tr>
+      <td class="td-mono">23 Jun, 15:43</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62550.7</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">65%</td>
+      <td class="td-rationale">The market's recent decline and low RSI suggest a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 15:41</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62489.4</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">Market appears oversold and due for a bounce, given the low RSI and recent positive 1h return</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 15:39</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62551.4</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">62%</td>
+      <td class="td-rationale">This setup suggests BTC is due for a bounce after a minor correction, with RSI and 24h return indicating oversold conditions.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 15:37</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$62693.3</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">65%</td>
+      <td class="td-rationale">Bearish momentum persists with price decline and low RSI, increasing likelihood of further price drop.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 15:35</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62514.5</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">68%</td>
+      <td class="td-rationale">The price has dropped significantly in the past day, and the RSI is oversold, suggesting a potential mean reversion.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 15:33</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62517.1</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">65%</td>
+      <td class="td-rationale">The recent 24h decline and low Fear &amp; Greed index suggest a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 15:31</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62539.8</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">65%</td>
+      <td class="td-rationale">The current market conditions suggest BTC is due for a bounce, with RSI at a low level and a relatively calm 1h return.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 15:29</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62506.9</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The recent price drop and oversold RSI suggest a possible mean reversion opportunity</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 15:27</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62473.7</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">80%</td>
+      <td class="td-rationale">The asset has been heavily sold, leading to an oversold condition, suggesting a potential rebound.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 15:25</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62561.7</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The market has been overcorrecting, with RSI at 20.9 and a recent 24h return decline, suggesting a potential mean reversion.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 15:23</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62564.6</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">Mean reversion signals are strong, with the asset being oversold and recently down, suggesting a potential bounce.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 15:20</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62745.6</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">Slightly oversold conditions and a hint of recovery in the 1 hour return indicate a potential buying opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 15:16</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62656.8</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The market appears to be oversold, with a recent decline and low Fear &amp; Greed index, suggesting a potential mean reversion.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 15:14</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62545.3</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">80%</td>
+      <td class="td-rationale">The recent 24h decline and oversold RSI reading suggest a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 15:12</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62476.0</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The current RSI and price action suggest a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 15:10</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62524.0</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The market has been oversold and has retraced significantly, suggesting a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 15:08</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62463.7</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The market appears to be oversold, with RSI at 17.9 and recent losses, making a short-term rebound likely.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 15:05</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62437.4</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The market has overcorrected and is due for a mean-reversion bounce.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 15:03</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$62525.6</td>
+      <td><span class="driver-tag">sentiment_extreme</span></td>
+      <td class="td-conf">80%</td>
+      <td class="td-rationale">The market is extremely fearful, with low RSI and a recent decline, indicating a potential shorting opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 15:01</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62541.0</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The current price is likely a buying opportunity as it's oversold according to the RSI and the 24h return indicates a minor correction rather than a trend reversal.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 14:59</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62416.4</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">Mean reversion signals are strong with BTC at a low RSI reading and a minor pullback from recent highs, making a long position a reasonable bet.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 14:57</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62414.0</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The recent large 24h return and the oversold RSI indicate that BTC is likely due for a bounce.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 14:29</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$62037.0</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">Extremely oversold conditions and a recent strong downward momentum make a short trade the most likely to succeed.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 14:27</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$62017.9</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">80%</td>
+      <td class="td-rationale">The recent price drop and oversold RSI suggest a strong potential for a bounce, but I'm more convinced a short is in order due to the overall downtrend</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 14:25</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62011.9</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The recent decline in price has led to oversold conditions, making a rebound likely</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 14:23</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62094.7</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">65%</td>
+      <td class="td-rationale">The market has been heavily sold off recently, and with RSI at 13.9, it's likely due for a bounce.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 14:21</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$62096.3</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">80%</td>
+      <td class="td-rationale">The market's extreme oversoldness and recent large losses make a mean reversion a likely scenario.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 14:19</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62117.2</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">68%</td>
+      <td class="td-rationale">The market has recently declined sharply, with RSI in extreme oversold territory, suggesting a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 14:17</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62093.3</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The market has overshot, and a bounce is likely due to mean reversion.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 14:15</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$62137.5</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">85%</td>
+      <td class="td-rationale">The market is showing signs of a strong downward momentum, with the price already down 5.19% in the last 24 hours and RSI at a low level, making a short position a reasonable bet.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 14:13</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62111.0</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The market has overcorrected and BTC is due for a bounce based on its extreme oversold RSI reading.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 14:11</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62085.5</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">65%</td>
+      <td class="td-rationale">The recent price drop and low RSI suggest a possible mean reversion opportunity, despite the bearish price action.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 14:08</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62147.2</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The market has been oversold lately and is due for a rebound.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 14:06</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$62176.0</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">80%</td>
+      <td class="td-rationale">Given the strong price drops and extreme fear, it's likely that the price will continue to drop due to momentum.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 14:04</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$62153.5</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The market is showing signs of a short-term momentum break, with strong losses in the last hour and day, and a low RSI indicating oversold conditions.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 14:02</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62257.2</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">65%</td>
+      <td class="td-rationale">The market has oversold and the recent drop may trigger a mean reversion, making a long position the most likely outcome.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 14:00</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$62225.6</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The strong downward momentum and oversold RSI conditions on the 1-hour chart suggest a potential short opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 13:58</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62230.0</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The market has corrected significantly, and the RSI suggests it's oversold, making a mean reversion a likely outcome.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 13:39</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62300.1</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">62%</td>
+      <td class="td-rationale">Bitcoin's price has dropped significantly in the past 24 hours, and the current RSI suggests an oversold condition, making a mean reversion trade a likely opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 13:36</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62341.2</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">50%</td>
+      <td class="td-rationale">The extreme decline in price has led to oversold conditions, suggesting a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 13:34</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62353.2</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">52%</td>
+      <td class="td-rationale">This is a classic oversold setup with RSI below 30 and a 24h loss, making a rebound likely.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 13:32</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62404.4</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The sharp price drop and low RSI suggest that a mean reversion is overdue, making a long position a reasonable bet.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 13:30</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62383.2</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The recent price drops and extremely low Fear &amp; Greed index suggest a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 13:28</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62356.1</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">50%</td>
+      <td class="td-rationale">The price has bounced significantly after a 4.24% 24h drop, indicating potential momentum for a breakout.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 13:26</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62342.4</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The market has oversold, with a low RSI and significant 24h loss, suggesting a potential bounce.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 13:24</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62347.3</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">55%</td>
+      <td class="td-rationale">The recent decline in BTC price, as indicated by a 24h return of -4.25%, has likely reached an extreme, making a mean reversion to previous levels a plausible scenario.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 13:21</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62347.8</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The sharp drop in BTC price has likely created a buying opportunity, given the oversold RSI reading and relatively small 1h return.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 13:19</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62400.3</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">Market conditions suggest a potential mean reversion opportunity, with BTC price below its recent highs and RSI indicating oversold conditions.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 13:17</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62371.7</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The market is oversold and showing signs of mean reversion, with a recent decline that may be a buying opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 13:15</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62385.2</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">80%</td>
+      <td class="td-rationale">The extreme oversold RSI(14) and low funding rate suggest a potential mean reversion to the mean.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 13:13</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$62383.5</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">80%</td>
+      <td class="td-rationale">The recent significant price drop over the past 24 hours, combined with a low RSI, suggests a strong momentum breakout to the downside.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 13:11</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62379.2</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The extreme Fear &amp; Greed index and recent large price drops create an oversold condition ripe for a bounce.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 13:09</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62432.3</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The current oversold conditions and significant price drop make a mean reversion setup likely.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 13:07</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62432.2</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">65%</td>
+      <td class="td-rationale">The market has likely overreacted to recent losses, making a rebound a likely mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 13:05</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62439.8</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">Given the recent sharp decline and RSI reading, a mean reversion to the previous trend is likely.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 13:03</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62520.1</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The market has recently experienced a significant drop, and the RSI suggests a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 13:01</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62484.7</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The market has overshot to the downside, and a bounce is likely imminent.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:59</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62489.7</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The current price and RSI suggest a potential mean reversion opportunity, as the market has oversold and is showing signs of a slight bounce.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:57</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62485.8</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">Market has overshot to the downside, RSI and recent return suggest a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:55</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62484.7</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">65%</td>
+      <td class="td-rationale">Market has dropped 3.3% in 24h, RSI is oversold, suggesting an opportunity for mean reversion.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:52</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$62446.7</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">80%</td>
+      <td class="td-rationale">The recent decline in price and negative 24h return suggest the market has broken out of its upward momentum.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:43</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62549.1</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The market has recently oversold, with RSI at a low and a brief 24h drop, suggesting a potential mean reversion</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:41</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62596.8</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The recent 24h decline and extreme Fear &amp; Greed index suggest a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:39</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62571.1</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">65%</td>
+      <td class="td-rationale">The market has oversold and is due for a bounce based on the RSI reading and recent price action.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:37</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62563.6</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The recent decline has pushed BTC to oversold levels, indicating a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:35</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62536.9</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The market is oversold and due for a bounce, given the recent price drop and low RSI reading.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:32</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62564.1</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">65%</td>
+      <td class="td-rationale">The recent decline has pushed BTC into oversold territory, suggesting a potential reversal.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:30</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62512.1</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The recent price drop, combined with a low RSI(14), suggests a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:28</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62500.4</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">80%</td>
+      <td class="td-rationale">The market has oversold and is likely due for a bounce given the RSI reading and recent price decline.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:26</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62490.9</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The market has oversold and the recent price drop suggests a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:24</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62537.6</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The recent decline in BTC has led to oversold conditions, making a short-term bounce likely.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:22</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62514.7</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">Market has overcorrected on short-term losses, setting up a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:20</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$62390.3</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">Strong indication of a potential reversal due to overbought conditions and recent price decline.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:18</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$62399.9</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">BTC is oversold and has recently declined, suggesting a short-term bounce is unlikely.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:16</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62400.1</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The RSI is extremely oversold and in need of a correction, making it a good opportunity to buy back in.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:14</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62353.8</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The price has dropped significantly in the past 24 hours, and the RSI is extremely low, suggesting a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:12</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62351.0</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The market's recent decline and low RSI suggest a potential rebound</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:10</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62335.0</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The market's extreme oversold conditions and recent price drop suggest a mean reversion is overdue.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:08</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62356.4</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The extremely oversold RSI reading and recent slight bounce in price suggest it's due for a mean reversion</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:06</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62300.5</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The market appears oversold, making a mean reversion to previous levels a likely outcome.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:03</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62351.6</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">Short-term losses may be reversed as BTC bounces off oversold levels and funding rate remains slightly negative.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 12:01</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62311.9</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">40%</td>
+      <td class="td-rationale">The market has overshot to the downside, and a small bounce is underway, suggesting a potential momentum breakout.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 11:59</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$62298.7</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">80%</td>
+      <td class="td-rationale">Market is showing clear signs of a momentum breakout to the downside after a significant drop.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 11:57</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62302.1</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The asset is oversold and has corrected by a relatively small amount, suggesting a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 11:55</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62266.1</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">Market is oversold and RSI indicates a potential buying opportunity, with some supporting evidence from the funding rate.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 11:53</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62253.6</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">Market appears due for a bounce given extreme oversold RSI and recent sharp decline.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 11:51</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62248.5</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The market has overcorrected, with very low RSI and a substantial 24h drop, suggesting a mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 11:49</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$62262.1</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">80%</td>
+      <td class="td-rationale">The significant drop in price over the last 24 hours, coupled with oversold RSI conditions, suggests a potential momentum breakout to the downside.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 11:47</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62235.7</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">80%</td>
+      <td class="td-rationale">The market is oversold and the funding rate is high, indicating a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 11:45</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62231.3</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">65%</td>
+      <td class="td-rationale">The current price is significantly oversold, and a mean reversion is likely due to the low RSI reading and negative funding rate.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 11:42</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62220.0</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">Market appears oversold and due for a bounce, with a low RSI and negative funding rate.</td>
+      <td><span class="pill pill-win">+$6</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 11:40</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62283.8</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">Market is oversold and showing signs of capitulation, making a strong bounce likely.</td>
+      <td><span class="pill pill-win">+$4</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 11:38</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62269.5</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The current extremely oversold RSI and negative funding rate suggest a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-win">+$5</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:39</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62417.4</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The current RSI and recent 24h return suggest that the market has overshot to the downside, making a mean reversion likely.</td>
+      <td><span class="pill pill-win">+$0</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:39</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62417.4</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">66%</td>
+      <td class="td-rationale">Buying mean reversion: 1h momentum 0.11%, RSI 11. Expecting continuation.</td>
+      <td><span class="pill pill-win">+$0</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:37</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62447.1</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">Buying momentum breakout: 1h momentum 0.15%, RSI 12. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-0</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:37</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62447.1</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The market is oversold, and BTC has shown a history of mean reversion after such a sharp decline.</td>
+      <td><span class="pill pill-loss">$-0</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:35</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62457.7</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">Market appears oversold based on RSI, and recent price action suggests potential for mean reversion.</td>
+      <td><span class="pill pill-loss">$-1</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:35</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62457.7</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">72%</td>
+      <td class="td-rationale">Buying momentum breakout: 1h momentum 0.17%, RSI 12. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-1</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:33</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62446.8</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">Mean reversion signals suggest BTC is due for a bounce from oversold levels</td>
+      <td><span class="pill pill-loss">$-1</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:33</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62446.8</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">Buying momentum breakout: 1h momentum 0.15%, RSI 12. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-1</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:31</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62457.6</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">72%</td>
+      <td class="td-rationale">Buying momentum breakout: 1h momentum 0.17%, RSI 12. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-1</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:31</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62457.6</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The market appears oversold, with RSI at 12.4 and a 24h return of -2.58%, suggesting a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-loss">$-1</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:29</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62483.9</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">62%</td>
+      <td class="td-rationale">The recent sharp drop has led to an oversold condition, making a mean reversion trade a likely opportunity.</td>
+      <td><span class="pill pill-loss">$-7</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:29</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62483.9</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">76%</td>
+      <td class="td-rationale">Buying momentum breakout: 1h momentum 0.21%, RSI 13. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-7</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:27</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62464.3</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">73%</td>
+      <td class="td-rationale">Buying momentum breakout: 1h momentum 0.18%, RSI 13. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-7</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:27</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62464.2</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">65%</td>
+      <td class="td-rationale">The market has overshot to the downside, and recent short-term returns are positive, suggesting a potential mean reversion.</td>
+      <td><span class="pill pill-loss">$-7</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:27</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62464.2</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">73%</td>
+      <td class="td-rationale">Buying momentum breakout: 1h momentum 0.18%, RSI 13. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-7</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:25</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62451.1</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">71%</td>
+      <td class="td-rationale">Buying momentum breakout: 1h momentum 0.16%, RSI 12. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-7</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:25</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62451.2</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">71%</td>
+      <td class="td-rationale">Buying momentum breakout: 1h momentum 0.16%, RSI 12. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-7</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:25</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62451.2</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">67%</td>
+      <td class="td-rationale">The recent sharp drop in price and low RSI(14) suggest a potential mean reversion, with the funding rate also hinting at a slight imbalance favoring long holders.</td>
+      <td><span class="pill pill-loss">$-7</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:23</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62461.7</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">73%</td>
+      <td class="td-rationale">Buying momentum breakout: 1h momentum 0.18%, RSI 13. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-5</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:23</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62472.9</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">80%</td>
+      <td class="td-rationale">The market is oversold and showing signs of short-term weakness, making a mean reversion to previous levels likely.</td>
+      <td><span class="pill pill-loss">$-6</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:23</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62473.0</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">74%</td>
+      <td class="td-rationale">Buying momentum breakout: 1h momentum 0.19%, RSI 13. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-6</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:21</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62450.1</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">71%</td>
+      <td class="td-rationale">Buying momentum breakout: 1h momentum 0.16%, RSI 12. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-5</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:21</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62450.1</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">71%</td>
+      <td class="td-rationale">Buying momentum breakout: 1h momentum 0.16%, RSI 12. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-5</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:21</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62453.5</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The BTC price has overshot on the downside and RSI is extremely oversold, indicating a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-loss">$-6</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:19</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62416.0</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">65%</td>
+      <td class="td-rationale">Buying mean reversion: 1h momentum 0.10%, RSI 11. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-4</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:19</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62429.8</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">67%</td>
+      <td class="td-rationale">Buying mean reversion: 1h momentum 0.12%, RSI 11. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-5</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:19</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62429.8</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">80%</td>
+      <td class="td-rationale">The recent decline has led to an oversold condition, suggesting a potential rebound.</td>
+      <td><span class="pill pill-loss">$-5</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:17</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62446.6</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">Buying momentum breakout: 1h momentum 0.15%, RSI 12. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-5</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:17</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62446.5</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">Buying momentum breakout: 1h momentum 0.15%, RSI 12. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-5</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:17</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62446.5</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The market is oversold and due for a bounce given the extreme RSI reading and recent correction from previous highs.</td>
+      <td><span class="pill pill-loss">$-5</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:15</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62409.4</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">64%</td>
+      <td class="td-rationale">Buying mean reversion: 1h momentum 0.09%, RSI 11. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-4</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:15</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62409.3</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">64%</td>
+      <td class="td-rationale">Buying mean reversion: 1h momentum 0.09%, RSI 11. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-4</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:13</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62419.2</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">66%</td>
+      <td class="td-rationale">Buying mean reversion: 1h momentum 0.11%, RSI 11. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-4</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:10</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62395.3</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">62%</td>
+      <td class="td-rationale">Buying mean reversion: 1h momentum 0.07%, RSI 10. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-5</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:10</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62385.6</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">Buying mean reversion: 1h momentum 0.05%, RSI 10. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-5</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:08</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62317.2</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">61%</td>
+      <td class="td-rationale">Buying mean reversion: 1h momentum -0.06%, RSI 9. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-4</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:08</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62333.3</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">58%</td>
+      <td class="td-rationale">Buying mean reversion: 1h momentum -0.03%, RSI 9. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-3</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:06</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62412.4</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">65%</td>
+      <td class="td-rationale">Buying mean reversion: 1h momentum 0.10%, RSI 11. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-4</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:06</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62376.6</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">59%</td>
+      <td class="td-rationale">Buying mean reversion: 1h momentum 0.04%, RSI 10. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-3</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:04</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62385.9</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">Buying mean reversion: 1h momentum 0.05%, RSI 10. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-3</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:04</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62394.8</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">62%</td>
+      <td class="td-rationale">Buying mean reversion: 1h momentum 0.07%, RSI 10. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-3</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:02</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62415.3</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">65%</td>
+      <td class="td-rationale">Buying mean reversion: 1h momentum 0.10%, RSI 11. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-4</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:02</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62412.0</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">65%</td>
+      <td class="td-rationale">Buying mean reversion: 1h momentum 0.10%, RSI 11. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-2</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62407.2</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">64%</td>
+      <td class="td-rationale">Buying mean reversion: 1h momentum 0.09%, RSI 11. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-2</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 10:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62373.8</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">59%</td>
+      <td class="td-rationale">Buying mean reversion: 1h momentum 0.04%, RSI 10. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-2</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 09:58</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62330.3</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">95%</td>
+      <td class="td-rationale">Buying mean reversion: 1h momentum -0.83%, RSI 13. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-1</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 09:58</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62356.6</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">95%</td>
+      <td class="td-rationale">Buying mean reversion: 1h momentum -0.78%, RSI 14. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-2</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 09:56</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62399.7</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">95%</td>
+      <td class="td-rationale">Buying mean reversion: 1h momentum -0.72%, RSI 14. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-2</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 09:56</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62389.0</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">95%</td>
+      <td class="td-rationale">Buying mean reversion: 1h momentum -0.73%, RSI 14. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-2</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 09:54</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62408.7</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">95%</td>
+      <td class="td-rationale">Buying mean reversion: 1h momentum -0.70%, RSI 14. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-2</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 09:54</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62416.9</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">95%</td>
+      <td class="td-rationale">Buying mean reversion: 1h momentum -0.69%, RSI 14. Expecting continuation.</td>
+      <td><span class="pill pill-loss">$-3</span></td>
+    </tr><tr>
+      <td class="td-mono">20 Jun, 00:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$65339.9</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">75%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$12</span></td>
+    </tr><tr>
+      <td class="td-mono">19 Jun, 23:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$65614.1</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">72%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$12</span></td>
+    </tr><tr>
+      <td class="td-mono">19 Jun, 22:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$64767.7</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">71%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-44</span></td>
+    </tr><tr>
+      <td class="td-mono">19 Jun, 21:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$67349.7</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">68%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-69</span></td>
+    </tr><tr>
+      <td class="td-mono">19 Jun, 20:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62476.7</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">57%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$25</span></td>
+    </tr><tr>
+      <td class="td-mono">19 Jun, 19:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63278.1</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">86%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$21</span></td>
+    </tr><tr>
+      <td class="td-mono">19 Jun, 18:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62058.5</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">94%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$75</span></td>
+    </tr><tr>
+      <td class="td-mono">19 Jun, 17:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62650.1</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">94%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-3</span></td>
+    </tr><tr>
+      <td class="td-mono">19 Jun, 16:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62765.4</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">58%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$29</span></td>
+    </tr><tr>
+      <td class="td-mono">19 Jun, 15:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$66834.7</td>
+      <td><span class="driver-tag">trend_follow</span></td>
+      <td class="td-conf">95%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-loss">$-6</span></td>
+    </tr><tr>
+      <td class="td-mono">19 Jun, 14:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$64403.1</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">66%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-22</span></td>
+    </tr><tr>
+      <td class="td-mono">19 Jun, 13:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$65501.6</td>
+      <td><span class="driver-tag">funding_signal</span></td>
+      <td class="td-conf">82%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-win">+$45</span></td>
+    </tr><tr>
+      <td class="td-mono">19 Jun, 12:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63849.1</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">82%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$43</span></td>
+    </tr><tr>
+      <td class="td-mono">19 Jun, 11:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63640.5</td>
+      <td><span class="driver-tag">trend_follow</span></td>
+      <td class="td-conf">66%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-loss">$-13</span></td>
+    </tr><tr>
+      <td class="td-mono">19 Jun, 10:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$64856.3</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">64%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-5</span></td>
+    </tr><tr>
+      <td class="td-mono">19 Jun, 09:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$61827.8</td>
+      <td><span class="driver-tag">funding_signal</span></td>
+      <td class="td-conf">85%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-win">+$7</span></td>
+    </tr><tr>
+      <td class="td-mono">19 Jun, 08:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$64652.5</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">58%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$32</span></td>
+    </tr><tr>
+      <td class="td-mono">19 Jun, 07:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$64598.4</td>
+      <td><span class="driver-tag">trend_follow</span></td>
+      <td class="td-conf">77%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-win">+$35</span></td>
+    </tr><tr>
+      <td class="td-mono">19 Jun, 06:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62142.0</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$13</span></td>
+    </tr><tr>
+      <td class="td-mono">19 Jun, 05:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63743.3</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">87%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$17</span></td>
+    </tr><tr>
+      <td class="td-mono">19 Jun, 04:00</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$64295.7</td>
+      <td><span class="driver-tag">trend_follow</span></td>
+      <td class="td-conf">61%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-loss">$-44</span></td>
+    </tr><tr>
+      <td class="td-mono">19 Jun, 03:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$61881.5</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">94%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-50</span></td>
+    </tr><tr>
+      <td class="td-mono">19 Jun, 02:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62382.1</td>
+      <td><span class="driver-tag">funding_signal</span></td>
+      <td class="td-conf">90%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-loss">$-57</span></td>
+    </tr><tr>
+      <td class="td-mono">19 Jun, 01:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$64138.1</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">75%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$17</span></td>
+    </tr><tr>
+      <td class="td-mono">19 Jun, 00:00</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$62973.3</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">82%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$52</span></td>
+    </tr><tr>
+      <td class="td-mono">18 Jun, 23:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$65536.2</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">61%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$4</span></td>
+    </tr><tr>
+      <td class="td-mono">18 Jun, 22:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$66786.6</td>
+      <td><span class="driver-tag">funding_signal</span></td>
+      <td class="td-conf">86%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-loss">$-23</span></td>
+    </tr><tr>
+      <td class="td-mono">18 Jun, 21:00</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$66118.3</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">91%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-30</span></td>
+    </tr><tr>
+      <td class="td-mono">18 Jun, 20:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62233.2</td>
+      <td><span class="driver-tag">trend_follow</span></td>
+      <td class="td-conf">75%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-loss">$-5</span></td>
+    </tr><tr>
+      <td class="td-mono">18 Jun, 19:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63926.5</td>
+      <td><span class="driver-tag">trend_follow</span></td>
+      <td class="td-conf">57%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-win">+$21</span></td>
+    </tr><tr>
+      <td class="td-mono">18 Jun, 18:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63764.4</td>
+      <td><span class="driver-tag">trend_follow</span></td>
+      <td class="td-conf">61%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-win">+$23</span></td>
+    </tr><tr>
+      <td class="td-mono">18 Jun, 17:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63271.8</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">61%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-48</span></td>
+    </tr><tr>
+      <td class="td-mono">18 Jun, 16:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$64735.2</td>
+      <td><span class="driver-tag">trend_follow</span></td>
+      <td class="td-conf">81%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-loss">$-12</span></td>
+    </tr><tr>
+      <td class="td-mono">18 Jun, 15:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$66055.1</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">80%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-36</span></td>
+    </tr><tr>
+      <td class="td-mono">18 Jun, 14:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62437.9</td>
+      <td><span class="driver-tag">trend_follow</span></td>
+      <td class="td-conf">87%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-loss">$-7</span></td>
+    </tr><tr>
+      <td class="td-mono">18 Jun, 13:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$67307.3</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">71%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-25</span></td>
+    </tr><tr>
+      <td class="td-mono">18 Jun, 12:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62402.9</td>
+      <td><span class="driver-tag">funding_signal</span></td>
+      <td class="td-conf">78%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-win">+$21</span></td>
+    </tr><tr>
+      <td class="td-mono">18 Jun, 11:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63060.6</td>
+      <td><span class="driver-tag">trend_follow</span></td>
+      <td class="td-conf">86%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-win">+$30</span></td>
+    </tr><tr>
+      <td class="td-mono">18 Jun, 10:00</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$62355.4</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">67%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-10</span></td>
+    </tr><tr>
+      <td class="td-mono">18 Jun, 09:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62329.6</td>
+      <td><span class="driver-tag">trend_follow</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-loss">$-3</span></td>
+    </tr><tr>
+      <td class="td-mono">18 Jun, 08:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$65527.0</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">61%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$12</span></td>
+    </tr><tr>
+      <td class="td-mono">18 Jun, 07:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63719.4</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">94%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-11</span></td>
+    </tr><tr>
+      <td class="td-mono">18 Jun, 06:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$65018.1</td>
+      <td><span class="driver-tag">funding_signal</span></td>
+      <td class="td-conf">82%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-win">+$61</span></td>
+    </tr><tr>
+      <td class="td-mono">18 Jun, 05:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63203.7</td>
+      <td><span class="driver-tag">funding_signal</span></td>
+      <td class="td-conf">94%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-win">+$1</span></td>
+    </tr><tr>
+      <td class="td-mono">18 Jun, 04:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$65699.9</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">57%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-7</span></td>
+    </tr><tr>
+      <td class="td-mono">18 Jun, 03:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$64733.4</td>
+      <td><span class="driver-tag">trend_follow</span></td>
+      <td class="td-conf">78%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-win">+$20</span></td>
+    </tr><tr>
+      <td class="td-mono">18 Jun, 02:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$65284.4</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">90%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-12</span></td>
+    </tr><tr>
+      <td class="td-mono">18 Jun, 01:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$65144.2</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">66%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-1</span></td>
+    </tr><tr>
+      <td class="td-mono">18 Jun, 00:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$64723.1</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">67%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-13</span></td>
+    </tr><tr>
+      <td class="td-mono">17 Jun, 23:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62575.2</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">80%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-10</span></td>
+    </tr><tr>
+      <td class="td-mono">17 Jun, 22:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63358.2</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">55%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$70</span></td>
+    </tr><tr>
+      <td class="td-mono">17 Jun, 21:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63006.3</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">82%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-28</span></td>
+    </tr><tr>
+      <td class="td-mono">17 Jun, 20:00</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$65076.4</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">62%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$17</span></td>
+    </tr><tr>
+      <td class="td-mono">17 Jun, 19:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62211.4</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">68%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$46</span></td>
+    </tr><tr>
+      <td class="td-mono">17 Jun, 18:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63329.3</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">72%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-14</span></td>
+    </tr><tr>
+      <td class="td-mono">17 Jun, 17:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62922.4</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-45</span></td>
+    </tr><tr>
+      <td class="td-mono">17 Jun, 16:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$64863.0</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">55%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-7</span></td>
+    </tr><tr>
+      <td class="td-mono">17 Jun, 15:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63339.5</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">87%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$0</span></td>
+    </tr><tr>
+      <td class="td-mono">17 Jun, 14:00</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$65653.3</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">76%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$43</span></td>
+    </tr><tr>
+      <td class="td-mono">17 Jun, 13:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$65471.9</td>
+      <td><span class="driver-tag">funding_signal</span></td>
+      <td class="td-conf">85%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-win">+$30</span></td>
+    </tr><tr>
+      <td class="td-mono">17 Jun, 12:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$65775.1</td>
+      <td><span class="driver-tag">funding_signal</span></td>
+      <td class="td-conf">78%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-loss">$-45</span></td>
+    </tr><tr>
+      <td class="td-mono">17 Jun, 11:00</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$63726.4</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">72%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$24</span></td>
+    </tr><tr>
+      <td class="td-mono">17 Jun, 10:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63869.0</td>
+      <td><span class="driver-tag">funding_signal</span></td>
+      <td class="td-conf">93%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-loss">$-27</span></td>
+    </tr><tr>
+      <td class="td-mono">17 Jun, 09:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$64775.4</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">78%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$21</span></td>
+    </tr><tr>
+      <td class="td-mono">17 Jun, 08:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62692.1</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">89%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-18</span></td>
+    </tr><tr>
+      <td class="td-mono">17 Jun, 07:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63930.7</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">85%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-11</span></td>
+    </tr><tr>
+      <td class="td-mono">17 Jun, 06:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$65518.6</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">74%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-22</span></td>
+    </tr><tr>
+      <td class="td-mono">17 Jun, 05:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62624.9</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">63%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$8</span></td>
+    </tr><tr>
+      <td class="td-mono">17 Jun, 04:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$64404.7</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">69%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$46</span></td>
+    </tr><tr>
+      <td class="td-mono">17 Jun, 03:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$61884.3</td>
+      <td><span class="driver-tag">trend_follow</span></td>
+      <td class="td-conf">66%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-win">+$43</span></td>
+    </tr><tr>
+      <td class="td-mono">17 Jun, 02:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62980.7</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">85%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$19</span></td>
+    </tr><tr>
+      <td class="td-mono">17 Jun, 01:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62254.8</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">68%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$13</span></td>
+    </tr><tr>
+      <td class="td-mono">17 Jun, 00:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$65998.5</td>
+      <td><span class="driver-tag">funding_signal</span></td>
+      <td class="td-conf">69%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-loss">$-51</span></td>
+    </tr><tr>
+      <td class="td-mono">16 Jun, 23:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$66647.3</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">56%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$36</span></td>
+    </tr><tr>
+      <td class="td-mono">16 Jun, 22:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63393.4</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">82%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$0</span></td>
+    </tr><tr>
+      <td class="td-mono">16 Jun, 21:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$64995.2</td>
+      <td><span class="driver-tag">funding_signal</span></td>
+      <td class="td-conf">65%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-loss">$-36</span></td>
+    </tr><tr>
+      <td class="td-mono">16 Jun, 20:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$66904.8</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">83%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$54</span></td>
+    </tr><tr>
+      <td class="td-mono">16 Jun, 19:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$68105.6</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">65%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$8</span></td>
+    </tr><tr>
+      <td class="td-mono">16 Jun, 18:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$65774.5</td>
+      <td><span class="driver-tag">funding_signal</span></td>
+      <td class="td-conf">71%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-win">+$6</span></td>
+    </tr><tr>
+      <td class="td-mono">16 Jun, 17:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62470.4</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">69%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$14</span></td>
+    </tr><tr>
+      <td class="td-mono">16 Jun, 16:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$65325.5</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">91%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$33</span></td>
+    </tr><tr>
+      <td class="td-mono">16 Jun, 15:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63588.2</td>
+      <td><span class="driver-tag">funding_signal</span></td>
+      <td class="td-conf">79%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-loss">$-13</span></td>
+    </tr><tr>
+      <td class="td-mono">16 Jun, 14:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$65395.6</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">83%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-93</span></td>
+    </tr><tr>
+      <td class="td-mono">16 Jun, 13:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62049.4</td>
+      <td><span class="driver-tag">trend_follow</span></td>
+      <td class="td-conf">58%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-loss">$-3</span></td>
+    </tr><tr>
+      <td class="td-mono">16 Jun, 12:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62593.2</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">85%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$10</span></td>
+    </tr><tr>
+      <td class="td-mono">16 Jun, 11:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$65819.8</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">95%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-41</span></td>
+    </tr><tr>
+      <td class="td-mono">16 Jun, 10:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$64531.8</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">79%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-13</span></td>
+    </tr><tr>
+      <td class="td-mono">16 Jun, 09:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$65180.6</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">79%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-19</span></td>
+    </tr><tr>
+      <td class="td-mono">16 Jun, 08:00</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$64216.0</td>
+      <td><span class="driver-tag">funding_signal</span></td>
+      <td class="td-conf">74%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-loss">$-31</span></td>
+    </tr><tr>
+      <td class="td-mono">16 Jun, 07:00</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$68800.0</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">57%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-16</span></td>
+    </tr><tr>
+      <td class="td-mono">16 Jun, 06:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63832.9</td>
+      <td><span class="driver-tag">trend_follow</span></td>
+      <td class="td-conf">67%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-win">+$19</span></td>
+    </tr><tr>
+      <td class="td-mono">16 Jun, 05:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62500.0</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">86%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$22</span></td>
+    </tr><tr>
+      <td class="td-mono">16 Jun, 04:00</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$63576.8</td>
+      <td><span class="driver-tag">funding_signal</span></td>
+      <td class="td-conf">63%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-win">+$26</span></td>
+    </tr><tr>
+      <td class="td-mono">16 Jun, 03:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63895.9</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">72%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$11</span></td>
+    </tr><tr>
+      <td class="td-mono">16 Jun, 02:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63163.8</td>
+      <td><span class="driver-tag">funding_signal</span></td>
+      <td class="td-conf">59%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-win">+$28</span></td>
+    </tr><tr>
+      <td class="td-mono">16 Jun, 01:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$64696.9</td>
+      <td><span class="driver-tag">trend_follow</span></td>
+      <td class="td-conf">91%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-loss">$-5</span></td>
+    </tr><tr>
+      <td class="td-mono">16 Jun, 00:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$66631.3</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">81%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$22</span></td>
+    </tr><tr>
+      <td class="td-mono">15 Jun, 23:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63650.7</td>
+      <td><span class="driver-tag">funding_signal</span></td>
+      <td class="td-conf">85%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-win">+$30</span></td>
+    </tr><tr>
+      <td class="td-mono">15 Jun, 22:00</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$61071.4</td>
+      <td><span class="driver-tag">funding_signal</span></td>
+      <td class="td-conf">82%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-loss">$-4</span></td>
+    </tr><tr>
+      <td class="td-mono">15 Jun, 21:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$64716.0</td>
+      <td><span class="driver-tag">trend_follow</span></td>
+      <td class="td-conf">71%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-win">+$44</span></td>
+    </tr><tr>
+      <td class="td-mono">15 Jun, 20:00</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$65341.7</td>
+      <td><span class="driver-tag">trend_follow</span></td>
+      <td class="td-conf">92%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-win">+$18</span></td>
+    </tr><tr>
+      <td class="td-mono">15 Jun, 19:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63172.6</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">68%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$30</span></td>
+    </tr><tr>
+      <td class="td-mono">15 Jun, 18:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$61567.8</td>
+      <td><span class="driver-tag">trend_follow</span></td>
+      <td class="td-conf">65%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-loss">$-39</span></td>
+    </tr><tr>
+      <td class="td-mono">15 Jun, 17:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$66248.9</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">69%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-42</span></td>
+    </tr><tr>
+      <td class="td-mono">15 Jun, 16:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$61925.6</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">95%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-3</span></td>
+    </tr><tr>
+      <td class="td-mono">15 Jun, 15:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$64881.4</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">74%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$55</span></td>
+    </tr><tr>
+      <td class="td-mono">15 Jun, 14:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63736.1</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">80%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-17</span></td>
+    </tr><tr>
+      <td class="td-mono">15 Jun, 13:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63701.1</td>
+      <td><span class="driver-tag">trend_follow</span></td>
+      <td class="td-conf">61%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-loss">$-9</span></td>
+    </tr><tr>
+      <td class="td-mono">15 Jun, 12:00</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$63307.4</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">68%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-27</span></td>
+    </tr><tr>
+      <td class="td-mono">15 Jun, 11:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$65019.4</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">79%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-16</span></td>
+    </tr><tr>
+      <td class="td-mono">15 Jun, 10:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63378.1</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">83%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-36</span></td>
+    </tr><tr>
+      <td class="td-mono">15 Jun, 09:00</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$63086.5</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">77%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$41</span></td>
+    </tr><tr>
+      <td class="td-mono">15 Jun, 08:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$65444.5</td>
+      <td><span class="driver-tag">funding_signal</span></td>
+      <td class="td-conf">89%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-win">+$3</span></td>
+    </tr><tr>
+      <td class="td-mono">15 Jun, 07:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$61538.1</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">67%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-win">+$4</span></td>
+    </tr><tr>
+      <td class="td-mono">15 Jun, 06:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62768.3</td>
+      <td><span class="driver-tag">trend_follow</span></td>
+      <td class="td-conf">74%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-loss">$-16</span></td>
+    </tr><tr>
+      <td class="td-mono">15 Jun, 05:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62447.4</td>
+      <td><span class="driver-tag">funding_signal</span></td>
+      <td class="td-conf">57%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-loss">$-36</span></td>
+    </tr><tr>
+      <td class="td-mono">15 Jun, 04:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$65500.8</td>
+      <td><span class="driver-tag">funding_signal</span></td>
+      <td class="td-conf">81%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-loss">$-39</span></td>
+    </tr><tr>
+      <td class="td-mono">15 Jun, 03:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$61879.7</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">64%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-24</span></td>
+    </tr><tr>
+      <td class="td-mono">15 Jun, 02:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$61994.0</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
+      <td><span class="pill pill-loss">$-26</span></td>
+    </tr><tr>
+      <td class="td-mono">15 Jun, 01:00</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$63398.0</td>
+      <td><span class="driver-tag">trend_follow</span></td>
+      <td class="td-conf">78%</td>
+      <td class="td-rationale">Trend and positioning support staying with the move.</td>
+      <td><span class="pill pill-win">+$15</span></td>
+    </tr></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+    
+<section id="page-report" class="page">
+  <div class="page-header">
+    <h2>Autopsy report</h2>
+    <p>The engine's verdict on whether the agent's stated reasoning actually explains its results.</p>
+  </div>
+  
+  <div class="verdict-banner">The agent's most-cited reason &quot;momentum_breakout&quot; is decorative (51% win vs 48% baseline). Its PnL is really driven by &quot;btc24hReturn&quot; (corr 0.90).</div>
+  <div class="kpi-row">
+    <div class="kpi-card"><div class="kpi-v">120</div><div class="kpi-l">Trades</div></div>
+    <div class="kpi-card"><div class="kpi-v">50.0%</div><div class="kpi-l">Win rate</div></div>
+    <div class="kpi-card"><div class="kpi-v">100.0%</div><div class="kpi-l">Self-deception</div></div>
+    <div class="kpi-card"><div class="kpi-v">24.9%</div><div class="kpi-l">Overconfidence</div></div>
+  </div>
+  <div class="card">
+    <h3>What actually drove PnL</h3>
+    <p class="card-sub">Correlation of each objective market feature with realized PnL.</p>
+    <table><thead><tr><th>Feature</th><th class="td-num">Corr</th><th>Strength</th></tr></thead><tbody><tr><td>btc24hReturn</td><td class="td-num">0.90</td>
+      <td class="td-bar"><span style="width:90.29798587631291%;background:#8AB4D6;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>btc1hReturn</td><td class="td-num">0.58</td>
+      <td class="td-bar"><span style="width:58.362210412335514%;background:#8AB4D6;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>rsi14</td><td class="td-num">-0.05</td>
+      <td class="td-bar"><span style="width:5.341937142490375%;background:#E07070;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>fearGreed</td><td class="td-num">-0.05</td>
+      <td class="td-bar"><span style="width:4.834731392978165%;background:#E07070;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>volatility</td><td class="td-num">-0.03</td>
+      <td class="td-bar"><span style="width:3.33400621521018%;background:#E07070;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>fundingRate</td><td class="td-num">-0.03</td>
+      <td class="td-bar"><span style="width:3.1450518399554173%;background:#E07070;display:block;height:8px;border-radius:4px"></span></td></tr></tbody></table>
+  </div>
+  <div class="card">
+    <h3>Are the stated reasons real?</h3>
+    <p class="card-sub">When the agent cited each driver, did those trades beat its baseline? "Decorative" means the reason was a story, not an edge.</p>
+    <table><thead><tr><th>Driver</th><th class="td-num">Cited</th><th class="td-num">Win%</th><th class="td-num">Base%</th><th class="td-num">Edge</th><th>Verdict</th><th>Sample quote</th></tr></thead><tbody><tr>
+    <td>momentum_breakout</td>
+    <td class="td-num">76</td>
+    <td class="td-num">51.3%</td>
+    <td class="td-num">47.7%</td>
+    <td class="td-num">3.6pp</td>
+    <td><span class="pill" style="background:#E8A847;color:#fff;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600">decorative</span></td>
+    <td class="td-rationale"></td>
+  </tr><tr>
+    <td>trend_follow</td>
+    <td class="td-num">22</td>
+    <td class="td-num">45.5%</td>
+    <td class="td-num">51.0%</td>
+    <td class="td-num">-5.6pp</td>
+    <td><span class="pill" style="background:#E8A847;color:#fff;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600">decorative</span></td>
+    <td class="td-rationale"></td>
+  </tr><tr>
+    <td>funding_signal</td>
+    <td class="td-num">22</td>
+    <td class="td-num">50.0%</td>
+    <td class="td-num">50.0%</td>
+    <td class="td-num">0.0pp</td>
+    <td><span class="pill" style="background:#E8A847;color:#fff;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600">decorative</span></td>
+    <td class="td-rationale"></td>
+  </tr></tbody></table>
+  </div>
+  <div class="card">
+    <h3>Confidence calibration</h3>
+    <p class="card-sub">When the agent was confident, did it actually win more?</p>
+    <table><thead><tr><th>Confidence</th><th class="td-num">Trades</th><th class="td-num">Said</th><th class="td-num">Won</th><th class="td-num">Gap</th></tr></thead><tbody><tr><td>0.0-0.6</td><td class="td-num">12</td>
+      <td class="td-num">57.0%</td>
+      <td class="td-num">58.3%</td>
+      <td class="td-num" style="color:#6B6866">-1.3pp</td></tr><tr><td>0.6-0.75</td><td class="td-num">47</td>
+      <td class="td-num">67.1%</td>
+      <td class="td-num">46.8%</td>
+      <td class="td-num" style="color:#E07070">20.3pp ⚠</td></tr><tr><td>0.75-0.9</td><td class="td-num">46</td>
+      <td class="td-num">81.7%</td>
+      <td class="td-num">58.7%</td>
+      <td class="td-num" style="color:#E07070">23.0pp ⚠</td></tr><tr><td>0.9-1.0</td><td class="td-num">15</td>
+      <td class="td-num">92.9%</td>
+      <td class="td-num">26.7%</td>
+      <td class="td-num" style="color:#E07070">66.2pp ⚠</td></tr></tbody></table>
+  </div>
+</section>
+    
+<section id="page-docs" class="page">
+  <div class="page-header">
+    <h2>Documentation</h2>
+    <p>Everything you need to install, run, and extend Glass Box.</p>
+  </div>
+
+  <div class="docs-grid">
+    <nav class="docs-nav">
+      <div class="docs-nav-group">Getting started</div>
+      <a href="#install" class="docs-link active">Installation</a>
+      <a href="#configure" class="docs-link">Configuration</a>
+      <a href="#commands" class="docs-link">Commands</a>
+      <div class="docs-nav-group">Reference</div>
+      <a href="#schema" class="docs-link">Decision record schema</a>
+      <a href="#drivers" class="docs-link">Driver tags</a>
+      <a href="#engine" class="docs-link">Engine outputs</a>
+    </nav>
+
+    <div class="docs-content">
+      <div id="install" class="docs-section">
+        <h3>Installation</h3>
+        <p>Glass Box requires Node.js 20 or later. No other runtime dependencies.</p>
+        <pre><code>git clone https://github.com/IamHarrie-Labs/glass-box
+cd glass-box
+npm install</code></pre>
+      </div>
+
+      <div id="configure" class="docs-section">
+        <h3>Configuration</h3>
+        <p>Copy <code>.env.example</code> to <code>.env</code> and fill in your LLM key. The agent loads it automatically.</p>
+        <pre><code># Required to enable the LLM brain
+LLM_API_KEY=your-key-here
+
+# Defaults to Bitget hackathon Qwen endpoint
+# Any OpenAI-compatible endpoint works
+LLM_BASE_URL=https://api.groq.com/openai/v1
+LLM_MODEL=llama-3.1-8b-instant
+
+# Tick interval in seconds (120 = 1 call / 2 min, safe for free tiers)
+TICK_SECONDS=120</code></pre>
+        <p>Swap LLM providers with no code change — just update the three env vars. Tested with Groq, Gemini, the Bitget hackathon Qwen endpoint, and OpenAI.</p>
+      </div>
+
+      <div id="commands" class="docs-section">
+        <h3>Commands</h3>
+        <div class="cmd-list">
+          <div class="cmd-row">
+            <div class="cmd-name"><code>npm run agent</code></div>
+            <div class="cmd-desc">Starts the live paper-trading agent. Ticks every <code>TICK_SECONDS</code>, fetches Bitget market data, asks the LLM to reason, logs a decision record. Runs continuously until stopped.</div>
+          </div>
+          <div class="cmd-row">
+            <div class="cmd-name"><code>npm run autopsy</code></div>
+            <div class="cmd-desc">Reads <code>data/trades.jsonl</code>, closes matured positions, runs the three autopsy analyses (attribution, self-deception, calibration), writes <code>data/report.json</code>.</div>
+          </div>
+          <div class="cmd-row">
+            <div class="cmd-name"><code>npm run report</code></div>
+            <div class="cmd-desc">Reads <code>data/report.json</code> and generates <code>data/report.html</code>, a self-contained audit report. Open in any browser.</div>
+          </div>
+          <div class="cmd-row">
+            <div class="cmd-name"><code>npm run site</code></div>
+            <div class="cmd-desc">Builds this full site (<code>data/index.html</code>) with live data embedded from <code>trades.jsonl</code> and <code>report.json</code>.</div>
+          </div>
+          <div class="cmd-row">
+            <div class="cmd-name"><code>npm run demo</code></div>
+            <div class="cmd-desc">Seeds synthetic trades, runs autopsy, builds report. Fully offline — no keys or network needed. Good for a quick proof-of-concept.</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="schema" class="docs-section">
+        <h3>Decision record schema</h3>
+        <p>Every trade the agent opens is written to <code>data/trades.jsonl</code> as one JSON object per line. The thesis is written before the position opens — outcome fields are filled in after close.</p>
+        <pre><code>{
+  "tradeId": "t_51bfe01c",
+  "timestamp": "2026-06-23T09:17:09.000Z",
+  "pair": "BTCUSDT",
+  "side": "long",
+  "entryPrice": 62446.5,
+  "sizeUsd": 1000,
+  "statedThesis": {
+    "primaryDriver": "mean_reversion",   // closed enum — see Driver tags
+    "supportingSignals": ["rsi_oversold", "funding_negative"],
+    "confidence": 0.70,
+    "naturalLanguage": "The market is oversold and due for a bounce..."
+  },
+  "marketSnapshot": {
+    "price": 62446.5,
+    "btc1hReturn": -0.007,
+    "btc24hReturn": -0.026,
+    "rsi14": 12.4,
+    "fundingRate": -0.0001,
+    "fearGreed": 38,
+    "volatility": 0.018
+  },
+  "outcome": {               // null until position closes
+    "exitPrice": 63100.0,
+    "pnlUsd": 10.47,
+    "heldMinutes": 240
+  }
+}</code></pre>
+        <p>Any external agent that logs this schema can be autopsied by Glass Box without touching the agent code.</p>
+      </div>
+
+      <div id="drivers" class="docs-section">
+        <h3>Driver tags</h3>
+        <p>The LLM is constrained to map its reasoning onto this closed enum. Free-text reasons cannot be aggregated across trades — a closed enum can. This is what makes the self-deception analysis statistically valid.</p>
+        <div class="driver-table">
+          <div class="driver-row"><code>momentum_breakout</code><span>Price breaking a level with volume/trend confirmation</span></div>
+          <div class="driver-row"><code>mean_reversion</code><span>Price has overshot and is due to revert</span></div>
+          <div class="driver-row"><code>trend_follow</code><span>Established trend continuation</span></div>
+          <div class="driver-row"><code>sentiment_extreme</code><span>Fear and Greed or positioning at an extreme</span></div>
+          <div class="driver-row"><code>funding_signal</code><span>Funding rate imbalance suggesting crowded positioning</span></div>
+          <div class="driver-row"><code>breakdown_short</code><span>Support break with downside momentum</span></div>
+          <div class="driver-row"><code>news_catalyst</code><span>Identifiable news or macro event driving price</span></div>
+        </div>
+      </div>
+
+      <div id="engine" class="docs-section">
+        <h3>Engine outputs</h3>
+        <p>The autopsy engine produces three analyses and compiles them into a report object written to <code>data/report.json</code>.</p>
+        <div class="cmd-list">
+          <div class="cmd-row">
+            <div class="cmd-name">Signal attribution</div>
+            <div class="cmd-desc">Pearson correlation of each objective market feature (RSI, 1h return, 24h return, funding rate, Fear and Greed, volatility) with realized PnL. Answers: what actually predicted your winners, regardless of what you said?</div>
+          </div>
+          <div class="cmd-row">
+            <div class="cmd-name">Self-deception detection</div>
+            <div class="cmd-desc">For each driver the agent cited, compares the win rate on those trades against the agent's baseline win rate. If citing a driver produces no lift, it is flagged as <strong>decorative</strong>. If it hurts, it is <strong>harmful</strong>.</div>
+          </div>
+          <div class="cmd-row">
+            <div class="cmd-name">Confidence calibration</div>
+            <div class="cmd-desc">Groups trades by stated confidence bucket and compares stated confidence against actual win rate. The Overconfidence Gap is the average spread between what the agent said and what happened.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+  </main>
+  <footer class="foot">Glass Box · open-source agent audit layer · Bitget AI Hackathon S1 · <a href="https://github.com/IamHarrie-Labs/glass-box" style="color:#8AB4D6">github.com/IamHarrie-Labs/glass-box</a></footer>
+</div>
+<script>
+function nav(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.topbar-nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.getElementById('nav-' + page).classList.add('active');
+  window.location.hash = page;
+}
+// restore tab from hash
+const h = window.location.hash.slice(1);
+if (['home','logs','report','docs'].includes(h)) nav(h);
+
+// log filtering
+function filterLogs() {
+  const q = document.getElementById('log-search').value.toLowerCase();
+  const drv = document.getElementById('log-driver').value;
+  const side = document.getElementById('log-side').value;
+  document.querySelectorAll('#log-body tr').forEach(row => {
+    const text = row.innerText.toLowerCase();
+    const matchQ = !q || text.includes(q);
+    const matchD = !drv || text.includes(drv);
+    const matchS = !side || text.includes(side.toUpperCase());
+    row.style.display = (matchQ && matchD && matchS) ? '' : 'none';
+  });
+}
+
+// docs nav highlight on scroll
+document.querySelectorAll('.docs-link').forEach(link => {
+  link.addEventListener('click', () => {
+    document.querySelectorAll('.docs-link').forEach(l => l.classList.remove('active'));
+    link.classList.add('active');
+    const target = document.querySelector(link.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth' });
+  });
+});
+</script>
+</body>
+</html>
