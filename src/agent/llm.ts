@@ -2,9 +2,11 @@
  * LLM-based decision making.
  *
  * On startup, loads data/report.json (if it exists) and:
- *   1. Restricts the driver list to only drivers with verdict "real_edge"
+ *   1. Removes drivers proven HARMFUL from the allowed list (but keeps the rest,
+ *      so the next autopsy still has driver diversity to measure against — a
+ *      list that collapses to one driver would poison its own baseline)
  *   2. Injects a performance feedback block into the system prompt so the
- *      agent knows which of its past reasons were real and which were fiction
+ *      agent knows which past reasons were real, decorative, or harmful
  *
  * Provider-agnostic via an OpenAI-compatible /chat/completions endpoint.
  *   LLM_API_KEY   required to enable the LLM agent
@@ -52,8 +54,11 @@ function loadFeedback(): Feedback {
     .filter((d) => d.verdict === "decorative")
     .map((d) => d.driver);
 
-  // Use only proven drivers; fall back to full list if none are proven yet
-  const allowedDrivers: DriverTag[] = realEdge.length > 0 ? realEdge : ALL_DRIVERS;
+  // Remove only the proven-harmful drivers. Keep real_edge + decorative +
+  // never-tested ones available, so (a) the agent still explores and (b) the
+  // next autopsy keeps a comparison group. Falling all the way back to a single
+  // driver was the degeneration bug: its baseline became empty -> always 0.
+  const allowedDrivers: DriverTag[] = ALL_DRIVERS.filter((d) => !harmful.includes(d));
 
   const topSignal = report.attribution[0];
   const winPct = (report.overallWinRate * 100).toFixed(0);
@@ -66,6 +71,10 @@ function loadFeedback(): Feedback {
     `- Real PnL driver: "${topSignal.feature}" (correlation ${topSignal.correlationWithPnl.toFixed(2)}).`,
     `  Weight this market feature heavily when deciding direction.`,
   ];
+
+  if (realEdge.length > 0) {
+    lines.push(`- Drivers with a PROVEN real edge: ${realEdge.join(", ")}. Prefer these when they fit.`);
+  }
 
   if (harmful.length > 0) {
     lines.push(`- HARMFUL reasons you cited that made your win rate DROP: ${harmful.join(", ")}.`);
@@ -82,7 +91,7 @@ function loadFeedback(): Feedback {
     lines.push(`  Calibrate downward — say 0.55 when you mean 0.7.`);
   }
 
-  lines.push(`- Only use drivers that have a proven edge. If the market does not match one of your allowed drivers, return flat.`);
+  lines.push(`- The harmful drivers above have been removed from your allowed list. If the market does not clearly match one of the remaining drivers, return flat rather than forcing a trade.`);
 
   return {
     allowedDrivers,
@@ -124,14 +133,14 @@ const SYSTEM = buildSystem();
 
 // ── user prompt ──────────────────────────────────────────────────────────────
 
-function buildUserPrompt(snap: MarketSnapshot): string {
-  return `Market snapshot (BTCUSDT perpetual):
+function buildUserPrompt(snap: MarketSnapshot, pair: string): string {
+  return `Market snapshot (${pair} perpetual):
 - price: ${snap.price.toFixed(1)}
-- BTC 1h return: ${(snap.btc1hReturn * 100).toFixed(2)}%
-- BTC 24h return: ${(snap.btc24hReturn * 100).toFixed(2)}%
+- 1h return: ${(snap.btc1hReturn * 100).toFixed(2)}%
+- 24h return: ${(snap.btc24hReturn * 100).toFixed(2)}%
 - RSI(14): ${snap.rsi14.toFixed(1)}
 - funding rate: ${(snap.fundingRate * 100).toFixed(4)}%
-- Fear & Greed: ${snap.fearGreed.toFixed(0)}/100
+- Fear & Greed (market-wide): ${snap.fearGreed.toFixed(0)}/100
 - realized volatility (1h): ${(snap.volatility * 100).toFixed(2)}%
 
 Decide your action now. Respond with JSON only.`;
@@ -154,7 +163,7 @@ function parseJson(text: string): any {
 
 // ── main decision function ───────────────────────────────────────────────────
 
-export async function decideLLM(snap: MarketSnapshot): Promise<Decision | null> {
+export async function decideLLM(snap: MarketSnapshot, pair = "BTCUSDT"): Promise<Decision | null> {
   const baseUrl = process.env.LLM_BASE_URL ?? "https://api.groq.com/openai/v1";
   const model = process.env.LLM_MODEL ?? "llama-3.1-8b-instant";
   const apiKey = process.env.LLM_API_KEY!;
@@ -167,7 +176,7 @@ export async function decideLLM(snap: MarketSnapshot): Promise<Decision | null> 
       temperature: 0.4,
       messages: [
         { role: "system", content: SYSTEM },
-        { role: "user", content: buildUserPrompt(snap) },
+        { role: "user", content: buildUserPrompt(snap, pair) },
       ],
     }),
     signal: AbortSignal.timeout(30000),

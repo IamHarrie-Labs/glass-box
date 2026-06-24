@@ -12,7 +12,7 @@
  */
 import type { DecisionRecord, DriverTag } from "../types.ts";
 import { SNAPSHOT_FEATURES } from "../types.ts";
-import { mean, pearson, welch } from "./stats.ts";
+import { mean, pearson, twoProportionZ } from "./stats.ts";
 
 export interface FeatureAttribution {
   feature: string;
@@ -22,10 +22,14 @@ export interface FeatureAttribution {
 export interface DriverVerdict {
   driver: DriverTag;
   timesCited: number;
+  longCited: number;          // how many of those citations were longs
+  shortCited: number;         // …and shorts (exposes directional confounding)
   winRateWhenCited: number;   // 0..1
-  baselineWinRate: number;    // win rate of all OTHER trades
+  baselineWinRate: number;    // DIRECTION-ADJUSTED: what the same long/short mix
+                              // of OTHER trades won. Controls for "this label was
+                              // just used while the market happened to rise".
   edge: number;               // winRateWhenCited - baselineWinRate
-  tStat: number;              // rough significance of that edge
+  tStat: number;              // two-proportion z for the cited-vs-rest difference
   verdict: "real_edge" | "decorative" | "harmful" | "insufficient_data";
   sampleRationale?: string;   // one real quote from the agent's natural language
 }
@@ -42,12 +46,14 @@ export interface AutopsyReport {
   totalTrades: number;
   overallWinRate: number;
   totalPnlUsd: number;
+  assets: string[];                         // distinct pairs in the log
   attribution: FeatureAttribution[];        // sorted by |corr| desc
   hiddenDriver: FeatureAttribution;         // the strongest real driver
   drivers: DriverVerdict[];
   selfDeceptionIndex: number;               // 0..1, share of citations that are decorative/harmful
   calibration: CalibrationBucket[];
   overconfidenceGap: number;                // avg(confidence) - overall win rate
+  effectiveSampleNote: string;              // honest caveat about overlapping windows
   headline: string;                         // one-line plain-English verdict
 }
 
@@ -79,26 +85,42 @@ export function runAutopsy(records: DecisionRecord[]): AutopsyReport {
   const hiddenDriver = attribution[0];
 
   // --- Job 2: self-deception per stated driver ---------------------------
+  // The baseline is DIRECTION-ADJUSTED: a driver cited mostly on longs is judged
+  // against what other longs won, not against the whole book. This stops a label
+  // from looking like an "edge" just because it rode the market's direction.
+  const win = (r: DecisionRecord) => (r.outcome!.win ? 1 : 0);
   const driverTags = [...new Set(closed.map((r) => r.statedThesis.primaryDriver))];
   const drivers: DriverVerdict[] = driverTags.map((d) => {
     const cited = closed.filter((r) => r.statedThesis.primaryDriver === d);
     const others = closed.filter((r) => r.statedThesis.primaryDriver !== d);
-    const winRateWhenCited = mean(cited.map((r) => (r.outcome!.win ? 1 : 0)));
-    const baselineWinRate = mean(others.map((r) => (r.outcome!.win ? 1 : 0)));
+
+    const longCited = cited.filter((r) => r.side === "long").length;
+    const shortCited = cited.filter((r) => r.side === "short").length;
+    const winRateWhenCited = mean(cited.map(win));
+
+    // Same-side win rates among OTHER trades, with graceful fallbacks so a sole
+    // surviving driver never collapses the baseline to 0 (the old bug).
+    const otherLong = others.filter((r) => r.side === "long");
+    const otherShort = others.filter((r) => r.side === "short");
+    const baseLong = otherLong.length ? mean(otherLong.map(win)) : overallWinRate;
+    const baseShort = otherShort.length ? mean(otherShort.map(win)) : overallWinRate;
+    const baselineWinRate = cited.length
+      ? (longCited * baseLong + shortCited * baseShort) / cited.length
+      : overallWinRate;
+
     const edge = winRateWhenCited - baselineWinRate;
-    const { tStat } = welch(
-      cited.map((r) => (r.outcome!.win ? 1 : 0)),
-      others.map((r) => (r.outcome!.win ? 1 : 0))
-    );
-    const sample = cited.find(r => r.statedThesis.naturalLanguage);
+    const { z } = twoProportionZ(cited.map(win), others.map(win));
+    const sample = cited.find((r) => r.statedThesis.naturalLanguage);
     return {
       driver: d,
       timesCited: cited.length,
+      longCited,
+      shortCited,
       winRateWhenCited,
       baselineWinRate,
       edge,
-      tStat,
-      verdict: classify(edge, tStat, cited.length),
+      tStat: z,
+      verdict: classify(edge, z, cited.length),
       sampleRationale: sample?.statedThesis.naturalLanguage,
     };
   }).sort((a, b) => b.timesCited - a.timesCited);
@@ -137,6 +159,16 @@ export function runAutopsy(records: DecisionRecord[]): AutopsyReport {
   const overconfidenceGap =
     mean(closed.map((r) => r.statedThesis.confidence)) - overallWinRate;
 
+  // --- honesty caveat about effective sample size ------------------------
+  // Trades on the same asset open minutes apart and are held for hours, so their
+  // holding windows overlap heavily — their outcomes are NOT independent. We say
+  // so out loud rather than overstate significance.
+  const assets = [...new Set(closed.map((r) => r.pair))];
+  const effectiveSampleNote =
+    `These ${closed.length} trades span ${assets.length} asset(s) with overlapping holding ` +
+    `windows, so they are not fully independent observations — read the significance ` +
+    `(z-scores) as directional, not as hard p-values.`;
+
   // --- headline ----------------------------------------------------------
   const topDriver = drivers[0];
   let headline: string;
@@ -155,12 +187,14 @@ export function runAutopsy(records: DecisionRecord[]): AutopsyReport {
     totalTrades: closed.length,
     overallWinRate,
     totalPnlUsd,
+    assets,
     attribution,
     hiddenDriver,
     drivers,
     selfDeceptionIndex,
     calibration,
     overconfidenceGap,
+    effectiveSampleNote,
     headline,
   };
 }

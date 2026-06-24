@@ -46,3 +46,16 @@ export function welch(a: number[], b: number[]): { diff: number; tStat: number }
   const diff = ma - mb;
   return { diff, tStat: se === 0 ? 0 : diff / se };
 }
+
+/** Two-proportion z-test — the right tool for binary win/loss data.
+ *  a, b are arrays of 0/1. Returns the z statistic for (rateA - rateB). */
+export function twoProportionZ(a: number[], b: number[]): { diff: number; z: number } {
+  const na = a.length, nb = b.length;
+  if (na < 1 || nb < 1) return { diff: mean(a) - mean(b), z: 0 };
+  const wa = a.reduce((s, x) => s + x, 0);
+  const wb = b.reduce((s, x) => s + x, 0);
+  const pa = wa / na, pb = wb / nb;
+  const pPool = (wa + wb) / (na + nb);
+  const se = Math.sqrt(pPool * (1 - pPool) * (1 / na + 1 / nb));
+  return { diff: pa - pb, z: se === 0 ? 0 : (pa - pb) / se };
+}

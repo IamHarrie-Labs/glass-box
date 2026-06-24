@@ -232,8 +232,11 @@ function buildReport(): string {
   if (!report) return `<div class="card empty-card"><p>No autopsy data yet. Run <code>npm run autopsy</code> first.</p></div>`;
   // find the strongest real driver for a plain-English summary
   const topAttr = report.attribution[0];
+  const assetLine = report.assets && report.assets.length
+    ? ` Across ${report.assets.length} asset(s): ${report.assets.join(", ")}.`
+    : "";
   const attrSummary = topAttr
-    ? `The strongest predictor of the agent's profits was <strong>${topAttr.feature}</strong> (correlation ${topAttr.correlationWithPnl.toFixed(2)}). Blue bars = this feature predicted wins. Red bars = this feature predicted losses. A correlation near 0 means no relationship.`
+    ? `The strongest predictor of the agent's profits was <strong>${topAttr.feature}</strong> (correlation ${topAttr.correlationWithPnl.toFixed(2)}). Blue bars = this feature predicted wins. Red bars = this feature predicted losses. A correlation near 0 means no relationship. PnL is net of round-trip trading friction.${assetLine}`
     : "";
   const attrRows = report.attribution.map(a => {
     const w = Math.abs(a.correlationWithPnl) * 100;
@@ -251,9 +254,11 @@ function buildReport(): string {
   const driverRows = report.drivers.map(d => {
     const edgePp = (d.edge * 100).toFixed(1);
     const edgeColor = d.edge > 0.02 ? "#3A9E6E" : d.edge < -0.02 ? "#C45050" : "#6B6866";
+    const split = `${d.longCited ?? 0}L / ${d.shortCited ?? 0}S`;
     return `<tr>
     <td><code class="driver-tag">${d.driver}</code></td>
     <td class="td-num">${d.timesCited}×</td>
+    <td class="td-num td-mono">${split}</td>
     <td class="td-num">${pct(d.winRateWhenCited)}</td>
     <td class="td-num">${pct(d.baselineWinRate)}</td>
     <td class="td-num" style="color:${edgeColor};font-weight:600">${d.edge >= 0 ? "+" : ""}${edgePp}pp</td>
@@ -297,9 +302,10 @@ function buildReport(): string {
   </div>
   <div class="card">
     <h3>Were the stated reasons real?</h3>
-    <p class="card-sub">For each reason the agent cited, we compare its win rate on those trades against the agent's average (baseline). If the win rate is no better — or worse — the stated reason was not a real edge.</p>
+    <p class="card-sub">For each reason the agent cited, we compare its win rate against a <strong>direction-adjusted baseline</strong> — what the same mix of long/short trades won <em>without</em> citing that reason. This stops a label from looking like an edge just because it was used while the market happened to be rising. The L/S column shows that long/short mix.</p>
     ${verdictLegend}
-    <table><thead><tr><th>Stated reason</th><th class="td-num">Times cited</th><th class="td-num">Win rate when cited</th><th class="td-num">Agent baseline</th><th class="td-num">Difference</th><th>Verdict</th><th>Agent's own words</th></tr></thead><tbody>${driverRows}</tbody></table>
+    <table><thead><tr><th>Stated reason</th><th class="td-num">Times cited</th><th class="td-num">L / S</th><th class="td-num">Win rate when cited</th><th class="td-num">Direction-adj. baseline</th><th class="td-num">Difference</th><th>Verdict</th><th>Agent's own words</th></tr></thead><tbody>${driverRows}</tbody></table>
+    <p class="caveat">${esc(report.effectiveSampleNote ?? "")}</p>
   </div>
   <div class="card">
     <h3>Did confidence actually mean anything?</h3>
@@ -352,14 +358,21 @@ npm install</code></pre>
         <pre><code># Required to enable the LLM brain
 LLM_API_KEY=your-key-here
 
-# Defaults to Bitget hackathon Qwen endpoint
 # Any OpenAI-compatible endpoint works
 LLM_BASE_URL=https://api.groq.com/openai/v1
 LLM_MODEL=llama-3.1-8b-instant
 
 # Tick interval in seconds (120 = 1 call / 2 min, safe for free tiers)
-TICK_SECONDS=120</code></pre>
-        <p>Swap LLM providers with no code change — just update the three env vars. Tested with Groq, Gemini, the Bitget hackathon Qwen endpoint, and OpenAI.</p>
+TICK_SECONDS=120
+
+# Assets to trade, rotated one per tick. Multiple assets stop the
+# "real driver" finding from being a single-coin tautology.
+SYMBOLS=BTCUSDT,ETHUSDT,SOLUSDT
+
+# Round-trip trading friction (fee + slippage) charged per closed
+# position, in basis points. Keeps paper PnL honest. Default 6.
+FRICTION_BPS=6</code></pre>
+        <p>Swap LLM providers with no code change — just update the three env vars. Tested with Groq, Gemini, and OpenAI.</p>
       </div>
 
       <div id="commands" class="docs-section">
@@ -446,11 +459,15 @@ TICK_SECONDS=120</code></pre>
           </div>
           <div class="cmd-row">
             <div class="cmd-name">Self-deception detection</div>
-            <div class="cmd-desc">For each driver the agent cited, compares the win rate on those trades against the agent's baseline win rate. If citing a driver produces no lift, it is flagged as <strong>decorative</strong>. If it hurts, it is <strong>harmful</strong>.</div>
+            <div class="cmd-desc">For each driver, compares its win rate against a <strong>direction-adjusted baseline</strong> — what the same long/short mix of other trades won — so a label can't look like an edge just because it rode the market's direction. Significance is a two-proportion z-test. No real lift &rarr; <strong>decorative</strong>; significant negative lift &rarr; <strong>harmful</strong>; significant positive lift &rarr; <strong>real edge</strong>.</div>
           </div>
           <div class="cmd-row">
             <div class="cmd-name">Confidence calibration</div>
             <div class="cmd-desc">Groups trades by stated confidence bucket and compares stated confidence against actual win rate. The Overconfidence Gap is the average spread between what the agent said and what happened.</div>
+          </div>
+          <div class="cmd-row">
+            <div class="cmd-name">Honesty caveat</div>
+            <div class="cmd-desc">Trades on one asset open minutes apart and are held for hours, so their windows overlap and outcomes aren't fully independent. The report says so out loud and treats z-scores as directional, not hard p-values. PnL is also net of trading friction.</div>
           </div>
         </div>
       </div>
@@ -534,6 +551,7 @@ code,pre{font-family:ui-monospace,"Cascadia Code","Fira Code",monospace}
 .card{background:#fff;border:1px solid #DDD9D5;border-radius:12px;padding:20px 24px;margin-bottom:18px}
 .card h3{font-size:15px;font-weight:600;margin-bottom:4px}
 .card-sub{color:#6B6866;font-size:13px;margin-bottom:14px}
+.caveat{color:#8A8784;font-size:11.5px;font-style:italic;margin-top:12px;line-height:1.5;border-top:1px dashed #E5E1DD;padding-top:10px}
 .empty-card{color:#6B6866;text-align:center;padding:40px}
 
 /* ── tables ── */

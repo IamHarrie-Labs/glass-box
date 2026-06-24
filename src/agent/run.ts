@@ -7,7 +7,8 @@
  * into the "verifiable usage record" the submission needs.
  *
  * Config via env (all optional):
- *   SYMBOL        default BTCUSDT
+ *   SYMBOLS       comma-separated pairs, rotated per tick  default BTCUSDT,ETHUSDT,SOLUSDT
+ *   SYMBOL        single pair (back-compat; overrides SYMBOLS if SYMBOLS unset)
  *   TICK_SECONDS  seconds between ticks                  default 3600 (1h)
  *   HOLD_MINUTES  how long to hold each paper position   default 240 (4h)
  *   MAX_TICKS     stop after N ticks (0 = run forever)   default 0
@@ -29,10 +30,10 @@ const USE_LLM = llmEnabled();
 
 /** Decide with the LLM when configured; fall back to rules on any LLM error so
  *  a flaky model call never stalls the loop. */
-async function decideWith(snap: MarketSnapshot): Promise<{ decision: Decision | null; brain: string }> {
+async function decideWith(snap: MarketSnapshot, pair: string): Promise<{ decision: Decision | null; brain: string }> {
   if (USE_LLM) {
     try {
-      return { decision: await decideLLM(snap), brain: "llm" };
+      return { decision: await decideLLM(snap, pair), brain: "llm" };
     } catch (e) {
       console.error(`  (llm failed, using rules: ${(e as Error).message})`);
       return { decision: decide(snap), brain: "rules*" };
@@ -41,7 +42,10 @@ async function decideWith(snap: MarketSnapshot): Promise<{ decision: Decision | 
   return { decision: decide(snap), brain: "rules" };
 }
 
-const SYMBOL = process.env.SYMBOL ?? "BTCUSDT";
+// One or more symbols, comma-separated. The loop rotates through them so the
+// "real driver" finding can't be a single-asset tautology (BTC predicting BTC).
+const SYMBOLS = (process.env.SYMBOLS ?? process.env.SYMBOL ?? "BTCUSDT,ETHUSDT,SOLUSDT")
+  .split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);
 const TICK_SECONDS = Number(process.env.TICK_SECONDS ?? 3600);
 const HOLD_MINUTES = Number(process.env.HOLD_MINUTES ?? 240);
 const MAX_TICKS = Number(process.env.MAX_TICKS ?? 0);
@@ -49,7 +53,7 @@ const MAX_TICKS = Number(process.env.MAX_TICKS ?? 0);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const ts = () => new Date().toISOString().slice(11, 19);
 
-console.log(`Glass Box agent · ${SYMBOL} · brain: ${USE_LLM ? `LLM (${process.env.LLM_MODEL ?? "qwen3.6-plus"})` : "rules"} · ` +
+console.log(`Glass Box agent · ${SYMBOLS.join(", ")} · brain: ${USE_LLM ? `LLM (${process.env.LLM_MODEL ?? "llama-3.1-8b-instant"})` : "rules"} · ` +
   `tick ${TICK_SECONDS}s · hold ${HOLD_MINUTES}m` +
   (MAX_TICKS ? ` · ${MAX_TICKS} ticks` : " · continuous"));
 console.log("Ctrl+C to stop. Trades stream to data/trades.jsonl.\n");
@@ -59,17 +63,18 @@ export async function run() {
   while (true) {
     tick++;
     try {
-      const { pair, snapshot } = await fetchSnapshot(SYMBOL);
-      const { decision } = await decideWith(snapshot);
+      const symbol = SYMBOLS[(tick - 1) % SYMBOLS.length]; // rotate assets
+      const { pair, snapshot } = await fetchSnapshot(symbol);
+      const { decision } = await decideWith(snapshot, pair);
 
       if (decision) {
         const rec = openPosition(pair, decision.side, snapshot, decision.thesis);
         console.log(
-          `[${ts()}] OPEN  ${rec.tradeId} ${decision.side.toUpperCase().padEnd(5)} @${snapshot.price.toFixed(1)} ` +
+          `[${ts()}] OPEN  ${rec.tradeId} ${pair.padEnd(8)} ${decision.side.toUpperCase().padEnd(5)} @${snapshot.price.toFixed(1)} ` +
           `"${decision.thesis.primaryDriver}" conf ${decision.thesis.confidence} — ${decision.thesis.naturalLanguage}`
         );
       } else {
-        console.log(`[${ts()}] flat  (no setup: rsi ${snapshot.rsi14.toFixed(0)}, 1h ${(snapshot.btc1hReturn * 100).toFixed(2)}%)`);
+        console.log(`[${ts()}] flat  ${pair} (no setup: rsi ${snapshot.rsi14.toFixed(0)}, 1h ${(snapshot.btc1hReturn * 100).toFixed(2)}%)`);
       }
 
       const closed = await closeMatured(HOLD_MINUTES);

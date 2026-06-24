@@ -73,6 +73,7 @@ code,pre{font-family:ui-monospace,"Cascadia Code","Fira Code",monospace}
 .card{background:#fff;border:1px solid #DDD9D5;border-radius:12px;padding:20px 24px;margin-bottom:18px}
 .card h3{font-size:15px;font-weight:600;margin-bottom:4px}
 .card-sub{color:#6B6866;font-size:13px;margin-bottom:14px}
+.caveat{color:#8A8784;font-size:11.5px;font-style:italic;margin-top:12px;line-height:1.5;border-top:1px dashed #E5E1DD;padding-top:10px}
 .empty-card{color:#6B6866;text-align:center;padding:40px}
 
 /* ── tables ── */
@@ -153,7 +154,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
 </svg></div>
     <nav class="topbar-nav">
       <button onclick="nav('home')" id="nav-home" class="active">Home</button>
-      <button onclick="nav('logs')" id="nav-logs">Logs <span style="font-size:11px;color:#8AB4D6">299</span></button>
+      <button onclick="nav('logs')" id="nav-logs">Logs <span style="font-size:11px;color:#8AB4D6">321</span></button>
       <button onclick="nav('report')" id="nav-report">Report</button>
       <button onclick="nav('docs')" id="nav-docs">Docs</button>
     </nav>
@@ -267,19 +268,19 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
 
   <div class="metrics-row">
     <div class="metric-card">
-      <div class="metric-num">299</div>
+      <div class="metric-num">321</div>
       <div class="metric-label">Trades logged</div>
     </div>
     <div class="metric-card">
-      <div class="metric-num">206</div>
+      <div class="metric-num">226</div>
       <div class="metric-label">Positions closed</div>
     </div>
     <div class="metric-card">
-      <div class="metric-num">52.4%</div>
+      <div class="metric-num">100.0%</div>
       <div class="metric-label">Self-deception index</div>
     </div>
     <div class="metric-card">
-      <div class="metric-num">33.7%</div>
+      <div class="metric-num">28.8%</div>
       <div class="metric-label">Overconfidence gap</div>
     </div>
   </div>
@@ -315,6 +316,182 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
           <th>Time</th><th>Side</th><th>Entry</th><th>Driver</th><th>Conf</th><th>Rationale</th><th>Result</th>
         </tr></thead>
         <tbody id="log-body"><tr>
+      <td class="td-mono">23 Jun, 17:43</td>
+      <td><span class="pill pill-short">SHORT</span></td>
+      <td class="td-mono">$62596.9</td>
+      <td><span class="driver-tag">momentum_breakout</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">Market's recent momentum is reversing, and this short position could capitalize on potential mean reversion.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 17:41</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62598.5</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The market has oversold and may be due for a rebound given the recent decline.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 17:38</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62565.2</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The market appears oversold, and a minor bounce is underway, suggesting a mean reversion setup.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 17:36</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62579.0</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The recent sharp drop and current oversold RSI levels suggest a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 17:34</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62594.4</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">52%</td>
+      <td class="td-rationale">The market is oversold and has shown a slight bounce, suggesting a potential mean reversion.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 17:32</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62602.1</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">Mean reversion is likely as BTC price has dropped significantly in the last 24 hours.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 17:30</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62574.1</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The market's RSI and recent price action suggest a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 17:28</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62548.7</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">75%</td>
+      <td class="td-rationale">The market is oversold and showing signs of mean reversion, with a positive 1h return and low RSI.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 17:26</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62567.5</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">65%</td>
+      <td class="td-rationale">The recent drop in price, coupled with oversold RSI, suggests a mean reversion setup, warranting a long position</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 17:24</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62582.4</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">68%</td>
+      <td class="td-rationale">The market is oversold and due for a rebound, given the recent decline and low fear and greed index.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 17:22</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62568.1</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The market has oversold and is due for a bounce, with RSI at 19.9 and a mildly negative 24h return.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 17:20</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62621.8</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">65%</td>
+      <td class="td-rationale">The recent downturn has pushed BTC to oversold RSI levels, suggesting a potential mean reversion is due.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 17:18</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62643.6</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The low RSI reading and recent price drop suggest the market may be due for a rebound.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 17:16</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62663.4</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The recent sharp decline has pushed RSI into oversold territory, suggesting a potential rebound.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 17:13</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62705.3</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">62%</td>
+      <td class="td-rationale">The market appears oversold, with a low RSI and a recent decline, creating a potential mean reversion setup.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 17:11</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62720.4</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">Market has recently declined and RSI suggests strong oversold conditions, indicating potential for a bounce.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 17:09</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62649.8</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The recent decline has led to an oversold condition, suggesting a potential mean reversion.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 17:07</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62685.9</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">65%</td>
+      <td class="td-rationale">The market has overcorrected, and the current price presents a good entry point for a mean reversion trade.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 17:05</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62495.9</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">80%</td>
+      <td class="td-rationale">The extremely oversold RSI and recent price drop suggest a potential mean reversion opportunity in the BTC market.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 17:03</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62420.1</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">60%</td>
+      <td class="td-rationale">The current oversold conditions and recent short-term price decline suggest a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 17:01</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62496.1</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">Market has oversold and shown some short-term stability, suggesting a potential mean reversion is underway</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
+      <td class="td-mono">23 Jun, 16:59</td>
+      <td><span class="pill pill-long">LONG</span></td>
+      <td class="td-mono">$62414.1</td>
+      <td><span class="driver-tag">mean_reversion</span></td>
+      <td class="td-conf">70%</td>
+      <td class="td-rationale">The RSI is near oversold levels, suggesting a potential mean reversion opportunity.</td>
+      <td><span class="pill pill-open">open</span></td>
+    </tr><tr>
       <td class="td-mono">23 Jun, 16:57</td>
       <td><span class="pill pill-long">LONG</span></td>
       <td class="td-mono">$62377.9</td>
@@ -905,7 +1082,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
       <td><span class="driver-tag">mean_reversion</span></td>
       <td class="td-conf">62%</td>
       <td class="td-rationale">Bitcoin's price has dropped significantly in the past 24 hours, and the current RSI suggests an oversold condition, making a mean reversion trade a likely opportunity.</td>
-      <td><span class="pill pill-open">open</span></td>
+      <td><span class="pill pill-win">+$5</span></td>
     </tr><tr>
       <td class="td-mono">23 Jun, 13:36</td>
       <td><span class="pill pill-long">LONG</span></td>
@@ -913,7 +1090,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
       <td><span class="driver-tag">mean_reversion</span></td>
       <td class="td-conf">50%</td>
       <td class="td-rationale">The extreme decline in price has led to oversold conditions, suggesting a potential mean reversion opportunity.</td>
-      <td><span class="pill pill-open">open</span></td>
+      <td><span class="pill pill-win">+$4</span></td>
     </tr><tr>
       <td class="td-mono">23 Jun, 13:34</td>
       <td><span class="pill pill-long">LONG</span></td>
@@ -921,7 +1098,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
       <td><span class="driver-tag">mean_reversion</span></td>
       <td class="td-conf">52%</td>
       <td class="td-rationale">This is a classic oversold setup with RSI below 30 and a 24h loss, making a rebound likely.</td>
-      <td><span class="pill pill-open">open</span></td>
+      <td><span class="pill pill-win">+$4</span></td>
     </tr><tr>
       <td class="td-mono">23 Jun, 13:32</td>
       <td><span class="pill pill-long">LONG</span></td>
@@ -929,7 +1106,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
       <td><span class="driver-tag">mean_reversion</span></td>
       <td class="td-conf">60%</td>
       <td class="td-rationale">The sharp price drop and low RSI suggest that a mean reversion is overdue, making a long position a reasonable bet.</td>
-      <td><span class="pill pill-open">open</span></td>
+      <td><span class="pill pill-win">+$4</span></td>
     </tr><tr>
       <td class="td-mono">23 Jun, 13:30</td>
       <td><span class="pill pill-long">LONG</span></td>
@@ -937,7 +1114,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
       <td><span class="driver-tag">mean_reversion</span></td>
       <td class="td-conf">70%</td>
       <td class="td-rationale">The recent price drops and extremely low Fear &amp; Greed index suggest a potential mean reversion opportunity.</td>
-      <td><span class="pill pill-open">open</span></td>
+      <td><span class="pill pill-win">+$4</span></td>
     </tr><tr>
       <td class="td-mono">23 Jun, 13:28</td>
       <td><span class="pill pill-long">LONG</span></td>
@@ -945,7 +1122,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
       <td><span class="driver-tag">momentum_breakout</span></td>
       <td class="td-conf">50%</td>
       <td class="td-rationale">The price has bounced significantly after a 4.24% 24h drop, indicating potential momentum for a breakout.</td>
-      <td><span class="pill pill-open">open</span></td>
+      <td><span class="pill pill-win">+$4</span></td>
     </tr><tr>
       <td class="td-mono">23 Jun, 13:26</td>
       <td><span class="pill pill-long">LONG</span></td>
@@ -953,7 +1130,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
       <td><span class="driver-tag">mean_reversion</span></td>
       <td class="td-conf">60%</td>
       <td class="td-rationale">The market has oversold, with a low RSI and significant 24h loss, suggesting a potential bounce.</td>
-      <td><span class="pill pill-open">open</span></td>
+      <td><span class="pill pill-win">+$4</span></td>
     </tr><tr>
       <td class="td-mono">23 Jun, 13:24</td>
       <td><span class="pill pill-long">LONG</span></td>
@@ -961,7 +1138,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
       <td><span class="driver-tag">mean_reversion</span></td>
       <td class="td-conf">55%</td>
       <td class="td-rationale">The recent decline in BTC price, as indicated by a 24h return of -4.25%, has likely reached an extreme, making a mean reversion to previous levels a plausible scenario.</td>
-      <td><span class="pill pill-open">open</span></td>
+      <td><span class="pill pill-win">+$4</span></td>
     </tr><tr>
       <td class="td-mono">23 Jun, 13:21</td>
       <td><span class="pill pill-long">LONG</span></td>
@@ -969,7 +1146,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
       <td><span class="driver-tag">mean_reversion</span></td>
       <td class="td-conf">60%</td>
       <td class="td-rationale">The sharp drop in BTC price has likely created a buying opportunity, given the oversold RSI reading and relatively small 1h return.</td>
-      <td><span class="pill pill-open">open</span></td>
+      <td><span class="pill pill-win">+$4</span></td>
     </tr><tr>
       <td class="td-mono">23 Jun, 13:19</td>
       <td><span class="pill pill-long">LONG</span></td>
@@ -977,7 +1154,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
       <td><span class="driver-tag">mean_reversion</span></td>
       <td class="td-conf">60%</td>
       <td class="td-rationale">Market conditions suggest a potential mean reversion opportunity, with BTC price below its recent highs and RSI indicating oversold conditions.</td>
-      <td><span class="pill pill-open">open</span></td>
+      <td><span class="pill pill-win">+$4</span></td>
     </tr><tr>
       <td class="td-mono">23 Jun, 13:17</td>
       <td><span class="pill pill-long">LONG</span></td>
@@ -985,7 +1162,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
       <td><span class="driver-tag">mean_reversion</span></td>
       <td class="td-conf">60%</td>
       <td class="td-rationale">The market is oversold and showing signs of mean reversion, with a recent decline that may be a buying opportunity.</td>
-      <td><span class="pill pill-open">open</span></td>
+      <td><span class="pill pill-win">+$5</span></td>
     </tr><tr>
       <td class="td-mono">23 Jun, 13:15</td>
       <td><span class="pill pill-long">LONG</span></td>
@@ -993,7 +1170,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
       <td><span class="driver-tag">mean_reversion</span></td>
       <td class="td-conf">80%</td>
       <td class="td-rationale">The extreme oversold RSI(14) and low funding rate suggest a potential mean reversion to the mean.</td>
-      <td><span class="pill pill-open">open</span></td>
+      <td><span class="pill pill-win">+$5</span></td>
     </tr><tr>
       <td class="td-mono">23 Jun, 13:13</td>
       <td><span class="pill pill-short">SHORT</span></td>
@@ -1001,7 +1178,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
       <td><span class="driver-tag">momentum_breakout</span></td>
       <td class="td-conf">80%</td>
       <td class="td-rationale">The recent significant price drop over the past 24 hours, combined with a low RSI, suggests a strong momentum breakout to the downside.</td>
-      <td><span class="pill pill-open">open</span></td>
+      <td><span class="pill pill-loss">$-5</span></td>
     </tr><tr>
       <td class="td-mono">23 Jun, 13:11</td>
       <td><span class="pill pill-long">LONG</span></td>
@@ -1009,7 +1186,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
       <td><span class="driver-tag">mean_reversion</span></td>
       <td class="td-conf">70%</td>
       <td class="td-rationale">The extreme Fear &amp; Greed index and recent large price drops create an oversold condition ripe for a bounce.</td>
-      <td><span class="pill pill-open">open</span></td>
+      <td><span class="pill pill-win">+$6</span></td>
     </tr><tr>
       <td class="td-mono">23 Jun, 13:09</td>
       <td><span class="pill pill-long">LONG</span></td>
@@ -1017,7 +1194,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
       <td><span class="driver-tag">mean_reversion</span></td>
       <td class="td-conf">60%</td>
       <td class="td-rationale">The current oversold conditions and significant price drop make a mean reversion setup likely.</td>
-      <td><span class="pill pill-open">open</span></td>
+      <td><span class="pill pill-win">+$4</span></td>
     </tr><tr>
       <td class="td-mono">23 Jun, 13:07</td>
       <td><span class="pill pill-long">LONG</span></td>
@@ -1025,7 +1202,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
       <td><span class="driver-tag">mean_reversion</span></td>
       <td class="td-conf">65%</td>
       <td class="td-rationale">The market has likely overreacted to recent losses, making a rebound a likely mean reversion opportunity.</td>
-      <td><span class="pill pill-open">open</span></td>
+      <td><span class="pill pill-win">+$5</span></td>
     </tr><tr>
       <td class="td-mono">23 Jun, 13:05</td>
       <td><span class="pill pill-long">LONG</span></td>
@@ -1033,7 +1210,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
       <td><span class="driver-tag">mean_reversion</span></td>
       <td class="td-conf">60%</td>
       <td class="td-rationale">Given the recent sharp decline and RSI reading, a mean reversion to the previous trend is likely.</td>
-      <td><span class="pill pill-open">open</span></td>
+      <td><span class="pill pill-win">+$1</span></td>
     </tr><tr>
       <td class="td-mono">23 Jun, 13:03</td>
       <td><span class="pill pill-long">LONG</span></td>
@@ -1041,7 +1218,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
       <td><span class="driver-tag">mean_reversion</span></td>
       <td class="td-conf">70%</td>
       <td class="td-rationale">The market has recently experienced a significant drop, and the RSI suggests a potential mean reversion opportunity.</td>
-      <td><span class="pill pill-open">open</span></td>
+      <td><span class="pill pill-loss">$-1</span></td>
     </tr><tr>
       <td class="td-mono">23 Jun, 13:01</td>
       <td><span class="pill pill-long">LONG</span></td>
@@ -1049,7 +1226,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
       <td><span class="driver-tag">mean_reversion</span></td>
       <td class="td-conf">70%</td>
       <td class="td-rationale">The market has overshot to the downside, and a bounce is likely imminent.</td>
-      <td><span class="pill pill-open">open</span></td>
+      <td><span class="pill pill-win">+$1</span></td>
     </tr><tr>
       <td class="td-mono">23 Jun, 12:59</td>
       <td><span class="pill pill-long">LONG</span></td>
@@ -1057,7 +1234,7 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
       <td><span class="driver-tag">mean_reversion</span></td>
       <td class="td-conf">70%</td>
       <td class="td-rationale">The current price and RSI suggest a potential mean reversion opportunity, as the market has oversold and is showing signs of a slight bounce.</td>
-      <td><span class="pill pill-open">open</span></td>
+      <td><span class="pill pill-loss">$-1</span></td>
     </tr><tr>
       <td class="td-mono">23 Jun, 12:57</td>
       <td><span class="pill pill-long">LONG</span></td>
@@ -2718,92 +2895,97 @@ pre{background:#F4F2EF;border:1px solid #DDD9D5;border-radius:10px;padding:16px;
     <p>The engine's verdict on whether the agent's stated reasoning actually explains its results.</p>
   </div>
   
-  <div class="verdict-banner">Top real driver of PnL: &quot;btc24hReturn&quot; (corr 0.76).</div>
+  <div class="verdict-banner">The agent's most-cited reason &quot;momentum_breakout&quot; is decorative (45% win vs 41% baseline). Its PnL is really driven by &quot;btc24hReturn&quot; (corr 0.70).</div>
   <div class="kpi-row">
     <div class="kpi-card">
-      <div class="kpi-v">206</div>
+      <div class="kpi-v">226</div>
       <div class="kpi-l">Trades analyzed</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-v">38.8%</div>
+      <div class="kpi-v">42.9%</div>
       <div class="kpi-l">Overall win rate</div>
     </div>
     <div class="kpi-card" title="% of stated reasons that were decorative or harmful — 0% is perfect honesty, 100% means nothing the agent said was true">
-      <div class="kpi-v">52.4%</div>
+      <div class="kpi-v">100.0%</div>
       <div class="kpi-l">Self-deception index <span class="kpi-hint">?</span></div>
     </div>
     <div class="kpi-card" title="Average gap between stated confidence and actual win rate — e.g. said 80% confident, won 51% of the time = 29pp gap">
-      <div class="kpi-v">33.7%</div>
+      <div class="kpi-v">28.8%</div>
       <div class="kpi-l">Overconfidence gap <span class="kpi-hint">?</span></div>
     </div>
   </div>
   <div class="card">
     <h3>What actually moved the PnL?</h3>
-    <p class="card-sub">The strongest predictor of the agent's profits was <strong>btc24hReturn</strong> (correlation 0.76). Blue bars = this feature predicted wins. Red bars = this feature predicted losses. A correlation near 0 means no relationship.</p>
-    <table><thead><tr><th>Market feature</th><th class="td-num">Correlation with profit</th><th style="width:36%">Strength &amp; direction</th></tr></thead><tbody><tr><td>btc24hReturn</td><td class="td-num">0.76</td>
-      <td class="td-bar"><span style="width:75.96607564344245%;background:#8AB4D6;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>btc1hReturn</td><td class="td-num">0.57</td>
-      <td class="td-bar"><span style="width:56.75985267937496%;background:#8AB4D6;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>fundingRate</td><td class="td-num">-0.03</td>
-      <td class="td-bar"><span style="width:2.7062940198034333%;background:#E07070;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>fearGreed</td><td class="td-num">-0.03</td>
-      <td class="td-bar"><span style="width:2.502242586984295%;background:#E07070;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>rsi14</td><td class="td-num">-0.02</td>
-      <td class="td-bar"><span style="width:2.3966226684503784%;background:#E07070;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>volatility</td><td class="td-num">0.00</td>
-      <td class="td-bar"><span style="width:0.13060856413188096%;background:#8AB4D6;display:block;height:8px;border-radius:4px"></span></td></tr></tbody></table>
+    <p class="card-sub">The strongest predictor of the agent's profits was <strong>btc24hReturn</strong> (correlation 0.70). Blue bars = this feature predicted wins. Red bars = this feature predicted losses. A correlation near 0 means no relationship. PnL is net of round-trip trading friction. Across 1 asset(s): BTCUSDT.</p>
+    <table><thead><tr><th>Market feature</th><th class="td-num">Correlation with profit</th><th style="width:36%">Strength &amp; direction</th></tr></thead><tbody><tr><td>btc24hReturn</td><td class="td-num">0.70</td>
+      <td class="td-bar"><span style="width:69.58708839325969%;background:#8AB4D6;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>btc1hReturn</td><td class="td-num">0.56</td>
+      <td class="td-bar"><span style="width:56.037742242896485%;background:#8AB4D6;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>fearGreed</td><td class="td-num">-0.03</td>
+      <td class="td-bar"><span style="width:2.734703412438586%;background:#E07070;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>fundingRate</td><td class="td-num">-0.03</td>
+      <td class="td-bar"><span style="width:2.710334115068676%;background:#E07070;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>rsi14</td><td class="td-num">-0.03</td>
+      <td class="td-bar"><span style="width:2.664033779465157%;background:#E07070;display:block;height:8px;border-radius:4px"></span></td></tr><tr><td>volatility</td><td class="td-num">-0.01</td>
+      <td class="td-bar"><span style="width:0.5367420823181358%;background:#E07070;display:block;height:8px;border-radius:4px"></span></td></tr></tbody></table>
   </div>
   <div class="card">
     <h3>Were the stated reasons real?</h3>
-    <p class="card-sub">For each reason the agent cited, we compare its win rate on those trades against the agent's average (baseline). If the win rate is no better — or worse — the stated reason was not a real edge.</p>
+    <p class="card-sub">For each reason the agent cited, we compare its win rate against a <strong>direction-adjusted baseline</strong> — what the same mix of long/short trades won <em>without</em> citing that reason. This stops a label from looking like an edge just because it was used while the market happened to be rising. The L/S column shows that long/short mix.</p>
     <div class="verdict-legend">
     <span><span class="vdot" style="background:#72BFA2"></span>real edge — this reason genuinely predicted wins</span>
     <span><span class="vdot" style="background:#E8A847"></span>decorative — cited often but made no difference</span>
     <span><span class="vdot" style="background:#E07070"></span>harmful — trades where this was cited performed worse</span>
     <span><span class="vdot" style="background:#C4B49A"></span>insufficient data — too few trades to be sure</span>
   </div>
-    <table><thead><tr><th>Stated reason</th><th class="td-num">Times cited</th><th class="td-num">Win rate when cited</th><th class="td-num">Agent baseline</th><th class="td-num">Difference</th><th>Verdict</th><th>Agent's own words</th></tr></thead><tbody><tr>
+    <table><thead><tr><th>Stated reason</th><th class="td-num">Times cited</th><th class="td-num">L / S</th><th class="td-num">Win rate when cited</th><th class="td-num">Direction-adj. baseline</th><th class="td-num">Difference</th><th>Verdict</th><th>Agent's own words</th></tr></thead><tbody><tr>
     <td><code class="driver-tag">momentum_breakout</code></td>
-    <td class="td-num">98×</td>
-    <td class="td-num">44.9%</td>
-    <td class="td-num">33.3%</td>
-    <td class="td-num" style="color:#3A9E6E;font-weight:600">+11.6pp</td>
-    <td><span class="pill" style="background:#72BFA2;color:#fff;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600">real edge</span></td>
+    <td class="td-num">100×</td>
+    <td class="td-num td-mono">85L / 15S</td>
+    <td class="td-num">45.0%</td>
+    <td class="td-num">41.1%</td>
+    <td class="td-num" style="color:#3A9E6E;font-weight:600">+3.9pp</td>
+    <td><span class="pill" style="background:#E8A847;color:#fff;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600">decorative</span></td>
     <td class="td-rationale">Price cleared the 4h range on rising volume; expecting continuation.</td>
   </tr><tr>
     <td><code class="driver-tag">mean_reversion</code></td>
-    <td class="td-num">64×</td>
-    <td class="td-num">23.4%</td>
-    <td class="td-num">45.8%</td>
-    <td class="td-num" style="color:#C45050;font-weight:600">-22.3pp</td>
-    <td><span class="pill" style="background:#E07070;color:#fff;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600">harmful</span></td>
+    <td class="td-num">82×</td>
+    <td class="td-num td-mono">82L / 0S</td>
+    <td class="td-num">37.8%</td>
+    <td class="td-num">45.2%</td>
+    <td class="td-num" style="color:#C45050;font-weight:600">-7.4pp</td>
+    <td><span class="pill" style="background:#E8A847;color:#fff;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600">decorative</span></td>
     <td class="td-rationale">Buying mean reversion: 1h momentum -0.69%, RSI 14. Expecting continuation.</td>
   </tr><tr>
     <td><code class="driver-tag">trend_follow</code></td>
     <td class="td-num">22×</td>
+    <td class="td-num td-mono">20L / 2S</td>
     <td class="td-num">45.5%</td>
-    <td class="td-num">38.0%</td>
-    <td class="td-num" style="color:#3A9E6E;font-weight:600">+7.4pp</td>
+    <td class="td-num">42.7%</td>
+    <td class="td-num" style="color:#3A9E6E;font-weight:600">+2.8pp</td>
     <td><span class="pill" style="background:#E8A847;color:#fff;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600">decorative</span></td>
     <td class="td-rationale">Trend and positioning support staying with the move.</td>
   </tr><tr>
     <td><code class="driver-tag">funding_signal</code></td>
     <td class="td-num">22×</td>
+    <td class="td-num td-mono">19L / 3S</td>
     <td class="td-num">50.0%</td>
-    <td class="td-num">37.5%</td>
-    <td class="td-num" style="color:#3A9E6E;font-weight:600">+12.5pp</td>
+    <td class="td-num">42.8%</td>
+    <td class="td-num" style="color:#3A9E6E;font-weight:600">+7.2pp</td>
     <td><span class="pill" style="background:#E8A847;color:#fff;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600">decorative</span></td>
     <td class="td-rationale">Trend and positioning support staying with the move.</td>
   </tr></tbody></table>
+    <p class="caveat">These 226 trades span 1 asset(s) with overlapping holding windows, so they are not fully independent observations — read the significance (z-scores) as directional, not as hard p-values.</p>
   </div>
   <div class="card">
     <h3>Did confidence actually mean anything?</h3>
     <p class="card-sub">A well-calibrated agent should win ~80% of trades when it says it is 80% confident. A positive gap means it was overconfident — it said a higher number than it deserved.</p>
-    <table><thead><tr><th>Confidence bucket</th><th class="td-num">Trades</th><th class="td-num">Agent said</th><th class="td-num">Actually won</th><th class="td-num">Gap (overconfidence)</th></tr></thead><tbody><tr><td>0.0-0.6</td><td class="td-num">16</td>
-      <td class="td-num">56.3%</td>
-      <td class="td-num">50.0%</td>
-      <td class="td-num" style="color:#3A9E6E;font-weight:400">+6.3pp</td></tr><tr><td>0.6-0.75</td><td class="td-num">115</td>
-      <td class="td-num">66.8%</td>
-      <td class="td-num">33.9%</td>
-      <td class="td-num" style="color:#E07070;font-weight:600">+32.9pp ← overconfident</td></tr><tr><td>0.75-0.9</td><td class="td-num">54</td>
+    <table><thead><tr><th>Confidence bucket</th><th class="td-num">Trades</th><th class="td-num">Agent said</th><th class="td-num">Actually won</th><th class="td-num">Gap (overconfidence)</th></tr></thead><tbody><tr><td>0.0-0.6</td><td class="td-num">20</td>
+      <td class="td-num">55.4%</td>
+      <td class="td-num">60.0%</td>
+      <td class="td-num" style="color:#3A9E6E;font-weight:400">-4.6pp</td></tr><tr><td>0.6-0.75</td><td class="td-num">129</td>
+      <td class="td-num">66.5%</td>
+      <td class="td-num">39.5%</td>
+      <td class="td-num" style="color:#E07070;font-weight:600">+27.0pp ← overconfident</td></tr><tr><td>0.75-0.9</td><td class="td-num">56</td>
       <td class="td-num">81.4%</td>
-      <td class="td-num">53.7%</td>
-      <td class="td-num" style="color:#E07070;font-weight:600">+27.7pp ← overconfident</td></tr><tr><td>0.9-1.0</td><td class="td-num">21</td>
+      <td class="td-num">53.6%</td>
+      <td class="td-num" style="color:#E07070;font-weight:600">+27.8pp ← overconfident</td></tr><tr><td>0.9-1.0</td><td class="td-num">21</td>
       <td class="td-num">93.5%</td>
       <td class="td-num">19.0%</td>
       <td class="td-num" style="color:#E07070;font-weight:600">+74.4pp ← overconfident</td></tr></tbody></table>
@@ -2843,14 +3025,21 @@ npm install</code></pre>
         <pre><code># Required to enable the LLM brain
 LLM_API_KEY=your-key-here
 
-# Defaults to Bitget hackathon Qwen endpoint
 # Any OpenAI-compatible endpoint works
 LLM_BASE_URL=https://api.groq.com/openai/v1
 LLM_MODEL=llama-3.1-8b-instant
 
 # Tick interval in seconds (120 = 1 call / 2 min, safe for free tiers)
-TICK_SECONDS=120</code></pre>
-        <p>Swap LLM providers with no code change — just update the three env vars. Tested with Groq, Gemini, the Bitget hackathon Qwen endpoint, and OpenAI.</p>
+TICK_SECONDS=120
+
+# Assets to trade, rotated one per tick. Multiple assets stop the
+# "real driver" finding from being a single-coin tautology.
+SYMBOLS=BTCUSDT,ETHUSDT,SOLUSDT
+
+# Round-trip trading friction (fee + slippage) charged per closed
+# position, in basis points. Keeps paper PnL honest. Default 6.
+FRICTION_BPS=6</code></pre>
+        <p>Swap LLM providers with no code change — just update the three env vars. Tested with Groq, Gemini, and OpenAI.</p>
       </div>
 
       <div id="commands" class="docs-section">
@@ -2937,11 +3126,15 @@ TICK_SECONDS=120</code></pre>
           </div>
           <div class="cmd-row">
             <div class="cmd-name">Self-deception detection</div>
-            <div class="cmd-desc">For each driver the agent cited, compares the win rate on those trades against the agent's baseline win rate. If citing a driver produces no lift, it is flagged as <strong>decorative</strong>. If it hurts, it is <strong>harmful</strong>.</div>
+            <div class="cmd-desc">For each driver, compares its win rate against a <strong>direction-adjusted baseline</strong> — what the same long/short mix of other trades won — so a label can't look like an edge just because it rode the market's direction. Significance is a two-proportion z-test. No real lift &rarr; <strong>decorative</strong>; significant negative lift &rarr; <strong>harmful</strong>; significant positive lift &rarr; <strong>real edge</strong>.</div>
           </div>
           <div class="cmd-row">
             <div class="cmd-name">Confidence calibration</div>
             <div class="cmd-desc">Groups trades by stated confidence bucket and compares stated confidence against actual win rate. The Overconfidence Gap is the average spread between what the agent said and what happened.</div>
+          </div>
+          <div class="cmd-row">
+            <div class="cmd-name">Honesty caveat</div>
+            <div class="cmd-desc">Trades on one asset open minutes apart and are held for hours, so their windows overlap and outcomes aren't fully independent. The report says so out loud and treats z-scores as directional, not hard p-values. PnL is also net of trading friction.</div>
           </div>
         </div>
       </div>

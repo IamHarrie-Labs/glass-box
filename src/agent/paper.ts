@@ -10,6 +10,10 @@ import { appendRecord, loadRecords, rewriteRecords } from "../store.ts";
 import { fetchPrice } from "../bitget/market.ts";
 
 const SIZE_USD = 1000;
+// Round-trip trading friction (taker fee + slippage), in basis points of notional.
+// Charged once per closed position so paper PnL isn't fantasy-frictionless.
+// Override with FRICTION_BPS; 6 bps ≈ Bitget taker fee + a little slippage.
+const FRICTION_BPS = Number(process.env.FRICTION_BPS ?? 6);
 
 /** Open a paper position and persist the Decision Record (outcome = null). */
 export function openPosition(
@@ -40,16 +44,25 @@ export function openPosition(
 export async function closeMatured(holdMinutes: number): Promise<number> {
   const records = loadRecords();
   const now = Date.now();
+  const friction = FRICTION_BPS / 10000; // bps -> fraction of notional
   let closed = 0;
+
+  // Fetch each pair's exit price at most once per call, not once per position.
+  const priceCache = new Map<string, number>();
+  const priceFor = async (pair: string) => {
+    if (!priceCache.has(pair)) priceCache.set(pair, await fetchPrice(pair));
+    return priceCache.get(pair)!;
+  };
 
   for (const r of records) {
     if (r.outcome !== null) continue;
     const ageMin = (now - Date.parse(r.timestamp)) / 60000;
     if (ageMin < holdMinutes) continue;
 
-    const exitPrice = await fetchPrice(r.pair);
+    const exitPrice = await priceFor(r.pair);
     const dir = r.side === "long" ? 1 : -1;
-    const pnlPct = (dir * (exitPrice - r.entryPrice)) / r.entryPrice;
+    const grossPct = (dir * (exitPrice - r.entryPrice)) / r.entryPrice;
+    const pnlPct = grossPct - friction; // subtract round-trip cost
     const pnlUsd = pnlPct * r.sizeUsd;
     r.outcome = {
       exitPrice,
