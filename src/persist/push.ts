@@ -22,7 +22,6 @@ const TOKEN  = process.env.GITHUB_TOKEN;
 const FILES_TO_SYNC = [
   "data/trades.jsonl",
   "data/report.json",
-  "docs/index.html",
 ];
 
 async function pushFile(path: string, ts: string): Promise<boolean> {
@@ -81,10 +80,6 @@ function runLocal(cmd: string) {
 async function push() {
   if (!TOKEN) return;
   if (!existsSync("data/trades.jsonl")) return;
-
-  // Rebuild autopsy + site so GitHub always has fresh data
-  runLocal(`npx tsx src/engine/run.ts`);
-  runLocal(`npx tsx src/report/site.ts`);
 
   const ts = new Date().toISOString().slice(0, 16).replace("T", " ");
   let allOk = true;
