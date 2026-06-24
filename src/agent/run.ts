@@ -92,5 +92,6 @@ export async function run() {
   console.log("Agent stopped. Run `npm run autopsy` to analyze.");
 }
 
-// Run directly when invoked as a script (npm run agent)
-run();
+// Run directly when invoked as a script (npm run agent), but not when imported
+const isMain = process.argv[1]?.endsWith("run.ts") || process.argv[1]?.endsWith("run.js");
+if (isMain) run();

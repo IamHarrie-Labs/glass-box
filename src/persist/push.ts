@@ -52,5 +52,6 @@ export function startPusher() {
   setInterval(push, INTERVAL_MS);
 }
 
-// Run directly when invoked as a script (npm run push-log)
-startPusher();
+// Run directly when invoked as a script (npm run push-log), but not when imported
+const isMain = process.argv[1]?.endsWith("push.ts") || process.argv[1]?.endsWith("push.js");
+if (isMain) startPusher();
