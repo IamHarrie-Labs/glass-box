@@ -14,7 +14,17 @@
 import { existsSync, readFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 
-const INTERVAL_MS = Number(process.env.PUSH_INTERVAL_MINUTES ?? 60) * 60 * 1000;
+// Hard floor on the push interval. Each push creates a commit on `master`,
+// and every commit triggers a Vercel/GitHub Pages redeploy. Vercel's free tier
+// hard-caps at 100 deploys/day and Pages throttles past ~10 builds/hour, so a
+// fast interval silently bricks the live site for 24h once the cap is hit.
+// The data files are baked into docs/index.html at build time, so frequent
+// pushes do not even update the live site — they only burn the deploy quota.
+// 60 min => ~48 deploys/day, comfortably under every host limit.
+const MIN_PUSH_MINUTES = 60;
+const requestedMinutes = Number(process.env.PUSH_INTERVAL_MINUTES ?? 60);
+const pushMinutes = Math.max(requestedMinutes, MIN_PUSH_MINUTES);
+const INTERVAL_MS = pushMinutes * 60 * 1000;
 const REPO   = process.env.GITHUB_REPO   ?? "IamHarrie-Labs/glass-box";
 const BRANCH = process.env.GITHUB_BRANCH ?? "master";
 const TOKEN  = process.env.GITHUB_TOKEN;
