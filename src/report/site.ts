@@ -775,4 +775,10 @@ function showTab(t) {
 
 mkdirSync("docs", { recursive: true });
 writeFileSync("docs/index.html", HTML, "utf8");
-console.log(`Wrote docs/index.html (${trades.length} trades, report: ${report ? "yes" : "no"})`);
+// Tell GitHub Pages to serve docs/ verbatim (skip Jekyll, which chokes on the
+// embedded JS template literals and slows builds).
+writeFileSync("docs/.nojekyll", "", "utf8");
+// SPA fallback: GitHub Pages serves 404.html for unknown paths. Pointing it at
+// the same app lets /logs, /report, /docs resolve on direct navigation/reload.
+writeFileSync("docs/404.html", HTML, "utf8");
+console.log(`Wrote docs/index.html + 404.html + .nojekyll (${trades.length} trades, report: ${report ? "yes" : "no"})`);
