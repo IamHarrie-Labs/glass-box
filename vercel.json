@@ -1,7 +1,7 @@
 {
-  "name": "tryglassbox",
   "buildCommand": "",
   "outputDirectory": "docs",
   "installCommand": "",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "git": { "deploymentEnabled": { "master": false } }
 }
