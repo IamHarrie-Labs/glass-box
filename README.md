@@ -4,7 +4,7 @@
 
 Every LLM trading agent writes a confident reason for every trade it makes. Glass Box checks whether that reason is actually true — or just a story the agent told itself.
 
-Live demo → **[tryglassbox.vercel.app](https://tryglassbox.vercel.app)**
+Live demo → **[useglassbox.vercel.app](https://useglassbox.vercel.app)**
 
 ---
 
@@ -14,14 +14,14 @@ When an AI agent says *"going long — momentum breakout with bullish funding"* 
 
 ## What it found on a real agent
 
-We ran Glass Box on 202 live paper trades and the autopsy was brutal:
+We ran Glass Box on 200+ live paper trades and the autopsy was blunt:
 
-- **Self-deception index: 100%** — not one stated reason was a genuine edge
-- **mean_reversion was actively harmful** — when the agent cited it, win rate dropped from 45% to 25%
-- **At 90%+ confidence, it won only 19% of the time** — high confidence was a negative signal
-- **The real driver: 24h BTC momentum (corr 0.77)** — the agent was riding beta and narrating fiction
+- **Self-deception index: 100%** — not one stated reason beat its direction-adjusted baseline
+- **The real driver: 24h BTC momentum (corr ~0.70)** — the agent was riding beta and narrating a story
+- **Overconfidence gap: ~29 points** — stated confidence ran far above the actual win rate
+- **Win rate ~43% after round-trip friction** — every cited reason graded out as decorative
 
-See the full report at [tryglassbox.vercel.app](https://tryglassbox.vercel.app) → Report tab.
+Numbers update live as the agent keeps trading. See the current report at [useglassbox.vercel.app](https://useglassbox.vercel.app) → Report tab.
 
 ---
 
@@ -52,7 +52,15 @@ Copy `.env.example` to `.env` and fill it in:
 LLM_API_KEY=your-groq-key-here
 LLM_BASE_URL=https://api.groq.com/openai/v1
 LLM_MODEL=llama-3.1-8b-instant
+
+# Loop pacing (keeps you under free-tier rate limits)
 TICK_SECONDS=120
+
+# Assets rotated one per tick — prevents single-asset tautologies
+SYMBOLS=BTCUSDT,ETHUSDT,SOLUSDT
+
+# Round-trip friction (fee + slippage) charged to every close, in bps
+FRICTION_BPS=6
 ```
 
 ### 3. Start the agent
@@ -91,6 +99,22 @@ Glass Box is two things:
 | Confidence calibration | When you said 90% confident, did you actually win 90%? |
 
 Each stated reason gets a verdict: `real_edge`, `decorative`, or `harmful`.
+
+### What makes the verdicts honest
+
+The self-deception check is built to resist the obvious ways a reason could *look* like an edge without being one:
+
+- **Direction-adjusted baseline.** A driver is not compared against the global win rate. It is compared against the win rate of the *same long/short mix* of trades that did **not** cite it. This stops a label from looking like an edge just because it happened to ride the market's direction.
+- **Two-proportion z-test.** A driver only earns `real_edge` or `harmful` when its lift over that baseline is statistically significant, not just numerically different. Thin samples stay `insufficient_data` rather than manufacturing false confidence.
+- **Round-trip friction.** Every closed position is charged `FRICTION_BPS` (default 6 bps) of fee + slippage, so PnL and every downstream verdict reflect honest, tradeable results.
+- **Multi-asset rotation.** The agent rotates through `SYMBOLS` (BTCUSDT, ETHUSDT, SOLUSDT) one per tick, so the "real driver" finding cannot be a single-asset tautology.
+- **Autopsy feedback loop.** After each autopsy, verified findings are injected back into the agent's prompt and any `harmful` driver is removed from its allowed tag set. Decorative drivers are kept on purpose — removing them would collapse the comparison group and invalidate future baselines.
+
+### Driver tags
+
+The LLM must map its reasoning onto a closed enum before each trade — free text cannot be aggregated, a closed set can:
+
+`momentum_breakout` · `mean_reversion` · `trend_follow` · `sentiment_extreme` · `funding_signal` · `breakdown_short` · `news_catalyst`
 
 ---
 
@@ -165,12 +189,16 @@ src/
     stats.ts      correlation + significance helpers
     run.ts        autopsy entry point
   report/
-    build.ts      HTML report generator
-    site.ts       full multi-page site generator
+    build.ts      standalone HTML report generator
+    site.ts       full multi-page site generator (Poppins UI, SPA routing)
   persist/
-    push.ts       hourly GitHub log sync (for server deployments)
+    push.ts       GitHub log sync, 60-min minimum interval
   server.ts       HTTP server + agent (for Render / cloud deployment)
   types.ts        shared types and Decision Record schema
+docs/
+  index.html      pre-built static site (deployed to Vercel)
+  404.html        SPA fallback for direct deep links
+  .nojekyll       serve docs/ verbatim on GitHub Pages
 ```
 
 ---
@@ -179,9 +207,19 @@ src/
 
 The agent runs continuously and needs a server. The free stack:
 
-**Render** (runs the agent) + **Vercel** (hosts the site)
+**Render** (runs the agent loop) + **Vercel** (hosts the static site)
 
-See the [Docs tab](https://tryglassbox.vercel.app/#docs) on the live site for the full deployment guide.
+How the pieces fit:
+
+- **Render** runs `npm run start`, which trades and periodically syncs `data/*` to GitHub via the Contents API. The push interval is floored at 60 minutes so it never floods a connected deploy host (Vercel free tier caps at 100 deploys/day).
+- **The site is static.** `npm run site` bakes the latest data into `docs/index.html`. Publish it to Vercel with a CLI upload — no git connection needed, so data pushes never trigger or throttle deploys:
+
+  ```bash
+  npm run site
+  vercel deploy --prod --yes --token=<your-vercel-token>
+  ```
+
+See the **Docs** page on the live site for the full deployment and configuration guide.
 
 ---
 

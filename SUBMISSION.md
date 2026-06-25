@@ -39,9 +39,9 @@ That record is written to a log before the outcome is known. The agent cannot go
 
 The second part is the autopsy engine. Once positions close and PnL is known, it runs three analyses over everything the agent logged.
 
-The first analysis is signal attribution. It correlates every objective market feature against realized PnL and answers: what actually predicted your winners? Often the honest answer is just BTC's 24-hour momentum. Beta, not brilliance.
+The first analysis is signal attribution. It correlates every objective market feature against realized PnL and answers: what actually predicted your winners? Often the honest answer is just BTC's 24-hour momentum. Beta, not brilliance. PnL is charged round-trip friction first, so the answer reflects tradeable results.
 
-The second analysis is self-deception detection. For each reason the agent cited — momentum breakout, mean reversion, trend follow, and so on — it asks: when the agent cited this reason, did those trades actually beat its baseline win rate? If mean reversion gets cited on 30% of trades but those trades win at 48% against a 49% baseline, the reason is decorative. It is a story, not an edge. The engine flags it with a plain verdict: real edge, decorative, or harmful.
+The second analysis is self-deception detection. For each reason the agent cited — momentum breakout, mean reversion, trend follow, and so on — it asks: when the agent cited this reason, did those trades actually beat its baseline win rate? Crucially, the baseline is direction-adjusted: a driver is compared against the same long/short mix of trades that did not cite it, so a label cannot look like an edge just by riding the market's direction. Lift is confirmed with a two-proportion z-test, so only statistically significant results earn a real-edge or harmful verdict. Thin samples stay flagged as insufficient data. The engine flags each reason with a plain verdict: real edge, decorative, or harmful — and harmful drivers are then removed from the agent's allowed set on the next tick.
 
 The third analysis is confidence calibration. It checks whether the agent's stated confidence actually predicted outcomes. LLMs are almost always overconfident. When an agent says 0.9, does it win 90% of the time or 52%? That gap is measured and reported.
 
@@ -51,7 +51,7 @@ Everything gets compiled into a self-contained HTML report. Judges open one file
 
 ## Deployment link
 
-https://tryglassbox.vercel.app
+https://useglassbox.vercel.app
 
 ---
 
@@ -96,7 +96,7 @@ A few things are worth being straight about.
 
 The self-deception analysis gets meaningful around 30 to 50 closed trades per driver. In a short hackathon window, some driver verdicts will come back as insufficient data. That is honest, not a bug. The engine does not manufacture false confidence in its own findings.
 
-The agent itself is deliberately simple. It trades one pair, BTCUSDT perpetuals, on a fixed 4-hour hold, using only the five objective market features. It is not trying to be profitable. It is trying to be an honest subject for the autopsy engine to analyze. A more sophisticated agent would produce richer findings. This one proves the concept works.
+The agent itself is deliberately simple. It rotates through a handful of perpetuals (BTCUSDT, ETHUSDT, SOLUSDT) on a fixed hold, using only the objective market features. It is not trying to be profitable. It is trying to be an honest subject for the autopsy engine to analyze. A more sophisticated agent would produce richer findings. This one proves the concept works.
 
 It only does paper trading by default. Live execution through the Bitget MCP server is documented in the README for anyone who wants it.
 
