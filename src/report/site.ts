@@ -697,7 +697,7 @@ window.addEventListener('popstate', e => {
 });
 
 function pathToPage() {
-  const p = window.location.pathname.replace(/^\//, '') || 'home';
+  const p = window.location.pathname.split('/').filter(Boolean)[0] || 'home';
   return PAGES.includes(p) ? p : 'home';
 }
 
