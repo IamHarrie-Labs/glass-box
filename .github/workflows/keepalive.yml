@@ -1,0 +1,26 @@
+name: keepalive
+
+# Render's free web service spins down after ~15 minutes with no inbound
+# traffic, which kills the agent loop running inside it. This pings the
+# health endpoint every 10 minutes so the instance stays awake and keeps
+# trading. (GitHub may delay scheduled runs under load; for bulletproof
+# uptime add an external monitor like UptimeRobot at a 5-minute interval.)
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render health endpoint
+        run: |
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 \
+              https://glass-box.onrender.com/health) && [ "$code" = "200" ] && {
+                echo "awake (HTTP $code)"; exit 0; }
+            echo "attempt $i got HTTP $code, retrying..."; sleep 15
+          done
+          echo "health check did not return 200 after 3 attempts"; exit 1
