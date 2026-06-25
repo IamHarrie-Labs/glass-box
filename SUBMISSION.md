@@ -90,7 +90,15 @@ There is also a fully offline demo that needs no keys or network connection:
 
 ---
 
-## Part 4: What it does not do yet, and where it goes
+## Part 4: From verdict to better trading, and who pays for it
+
+The report is not the end, it is a control loop. After each autopsy the findings are written back into the agent. A driver graded harmful is removed from its allowed set, so it cannot make that losing trade again. A driver graded real edge is reinforced. Decorative ones are kept but labeled. This is how a real desk improves, kill what has no edge and scale what does, except here it runs on statistical proof instead of intuition. And when nothing grades out as a real edge, as happened with our own agent, the honest call is to keep that agent on paper and off real capital. Preventing a losing agent from going live is a feature, not a shortfall, and the losses it prevents are real.
+
+Now the part that matters to an exchange. Glass Box is risk infrastructure. An exchange earns on volume and retention, and the quickest way to lose both is to let users run AI agents that quietly blow up. Agents that get audited and pruned last longer, so traders stay instead of quitting after a drawdown. "Trade with agents you can actually verify" is a trust line no competitor offers. And the Self-Deception Index is the natural way to rank agents in a future marketplace, a credit score for how honest an agent's reasoning really is. A fund running ten LLM agents needs to know which one is genuinely reasoning and which is just telling good stories. Glass Box answers that, and that answer is what keeps a platform's traders alive.
+
+---
+
+## Part 5: What it does not do yet, and where it goes
 
 A few things are worth being straight about.
 

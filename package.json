@@ -10,6 +10,7 @@
     "autopsy": "tsx src/engine/run.ts",
     "report": "tsx src/report/build.ts",
     "site": "tsx src/report/site.ts",
+    "ledger": "tsx src/report/ledger.ts",
     "demo": "tsx src/demo/seed.ts && npm run autopsy && npm run report"
   },
   "keywords": ["bitget", "ai-agent", "trading", "audit", "infra", "hackathon"],

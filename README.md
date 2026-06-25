@@ -118,6 +118,30 @@ The LLM must map its reasoning onto a closed enum before each trade — free tex
 
 ---
 
+## From verdict to better trading
+
+A report nobody acts on is just a chart. Glass Box closes the loop. When the autopsy runs, it doesn't only grade the agent, it rewires it:
+
+- A driver that grades `harmful` (it actually loses money when cited, confirmed by the z-test) gets pulled from the agent's allowed tags on the next tick. The agent can no longer make that trade. The bleeding stops.
+- A driver that grades `real_edge` gets reinforced in the prompt, so the agent leans on what genuinely works.
+- A `decorative` driver is kept but labeled, so nobody mistakes a good story for a real signal.
+
+That is how a real trading desk gets better: kill the strategies with no edge, scale the ones that have it. Glass Box just does it with statistical proof instead of gut feel.
+
+And when every driver grades out decorative, like it did on our own agent, the honest verdict is "this agent has no edge yet, don't risk real money on it." Stopping a losing agent before it goes live is not a failure of the tool. It is the point. The losses it prevents are real money saved.
+
+## Why an exchange cares
+
+Glass Box is risk infrastructure, not a signal service. An exchange makes money on volume and retention, and the fastest way to lose both is to let users deploy AI agents that quietly blow up.
+
+- Agents that get audited and pruned survive longer, so users keep trading instead of rage-quitting after a drawdown.
+- "Trade with agents you can actually verify" is a trust line no competitor has.
+- The Self-Deception Index is the natural ranking metric for an agent marketplace: a credit score for an agent's reasoning honesty.
+
+A desk running ten LLM agents needs to know which one is really reasoning and which is just telling good stories. Glass Box answers that, and the answer is what keeps a platform's traders alive.
+
+---
+
 ## Audit your own agent
 
 Glass Box is not just for its built-in agent. Any agent can be audited by logging Decision Records to a JSONL file. The schema is simple:
@@ -170,6 +194,7 @@ GLASSBOX_LOG=path/to/your-agent.jsonl npm run autopsy
 | `npm run autopsy` | Analyze the trade log, write report.json |
 | `npm run site` | Build the full Glass Box site to docs/index.html |
 | `npm run report` | Build just the autopsy HTML report |
+| `npm run ledger` | Write a running-balance ledger (CSV) from the trade log |
 
 ---
 
@@ -191,6 +216,7 @@ src/
   report/
     build.ts      standalone HTML report generator
     site.ts       full multi-page site generator (Poppins UI, SPA routing)
+    ledger.ts     running-balance ledger (CSV) derived from the trade log
   persist/
     push.ts       GitHub log sync, 60-min minimum interval
   server.ts       HTTP server + agent (for Render / cloud deployment)
@@ -199,6 +225,10 @@ docs/
   index.html      pre-built static site (deployed to Vercel)
   404.html        SPA fallback for direct deep links
   .nojekyll       serve docs/ verbatim on GitHub Pages
+data/
+  trades.jsonl    append-only paper-trading log (the audit trail)
+  report.json     autopsy output (verdicts, correlations, calibration)
+  ledger.csv      running-balance ledger with timestamp, pair, side, price, size
 ```
 
 ---
