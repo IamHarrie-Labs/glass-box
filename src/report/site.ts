@@ -1,7 +1,8 @@
 /**
  * `npm run site` — generates docs/index.html.
- * Dark-themed single-page site based on the Glassbox.dc.html design.
- * All DCLogic template vars replaced with live embedded data.
+ * Single-page app with 4 routes: /, /logs, /report, /docs.
+ * Clean URL routing via history.pushState (no # in URL).
+ * Vercel rewrites send all paths to index.html.
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import type { AutopsyReport } from "../engine/autopsy.ts";
@@ -9,9 +10,7 @@ import type { DecisionRecord } from "../types.ts";
 
 // ── data ────────────────────────────────────────────────────────────────────
 const trades: DecisionRecord[] = existsSync("data/trades.jsonl")
-  ? readFileSync("data/trades.jsonl", "utf8")
-      .split("\n").filter(Boolean)
-      .map((l) => JSON.parse(l))
+  ? readFileSync("data/trades.jsonl", "utf8").split("\n").filter(Boolean).map(l => JSON.parse(l))
   : [];
 
 const report: AutopsyReport | null = existsSync("data/report.json")
@@ -23,162 +22,274 @@ const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-const closedTrades = trades.filter((t) => t.outcome);
+const closedTrades = trades.filter(t => t.outcome);
 
-// SDI color: red if > 50%, amber if 20-50%, green if low
-const sdiColor = report
-  ? report.selfDeceptionIndex > 0.5 ? "#f87171" : report.selfDeceptionIndex > 0.2 ? "#fbbf24" : "#34d399"
-  : "#fff";
-const sdiAccent = report
-  ? report.selfDeceptionIndex > 0.5 ? "rgba(248,113,113,0.3)" : report.selfDeceptionIndex > 0.2 ? "rgba(251,191,36,0.25)" : "rgba(52,211,153,0.3)"
-  : "rgba(255,255,255,0.1)";
-const sdiCardBorder = report
-  ? report.selfDeceptionIndex > 0.5 ? "rgba(248,113,113,0.15)" : report.selfDeceptionIndex > 0.2 ? "rgba(251,191,36,0.15)" : "rgba(52,211,153,0.15)"
-  : "rgba(255,255,255,0.08)";
-const sdiCardBg = report
-  ? report.selfDeceptionIndex > 0.5 ? "rgba(248,113,113,0.06)" : report.selfDeceptionIndex > 0.2 ? "rgba(251,191,36,0.06)" : "rgba(52,211,153,0.06)"
-  : "rgba(255,255,255,0.04)";
+// SDI colors
+const sdiVal  = report?.selfDeceptionIndex ?? 0;
+const sdiText = report ? pct(report.selfDeceptionIndex) : "—";
+const sdiColor  = sdiVal > 0.5 ? "#f87171" : sdiVal > 0.2 ? "#fbbf24" : "#34d399";
+const sdiBg     = sdiVal > 0.5 ? "rgba(248,113,113,0.08)" : sdiVal > 0.2 ? "rgba(251,191,36,0.08)" : "rgba(52,211,153,0.08)";
+const sdiBorder = sdiVal > 0.5 ? "rgba(248,113,113,0.22)" : sdiVal > 0.2 ? "rgba(251,191,36,0.22)" : "rgba(52,211,153,0.22)";
 
-const ocgColor = report ? (report.overconfidenceGap > 0.1 ? "#fbbf24" : "#34d399") : "#fff";
-const ocgCardBg = report ? (report.overconfidenceGap > 0.1 ? "rgba(251,191,36,0.06)" : "rgba(52,211,153,0.06)") : "rgba(255,255,255,0.04)";
-const ocgCardBorder = report ? (report.overconfidenceGap > 0.1 ? "rgba(251,191,36,0.15)" : "rgba(52,211,153,0.15)") : "rgba(255,255,255,0.08)";
+// OCG colors
+const ocgVal  = report?.overconfidenceGap ?? 0;
+const ocgText = report ? pct(report.overconfidenceGap) : "—";
+const ocgColor  = ocgVal > 0.1 ? "#fbbf24" : "#34d399";
+const ocgBg     = ocgVal > 0.1 ? "rgba(251,191,36,0.08)" : "rgba(52,211,153,0.08)";
+const ocgBorder = ocgVal > 0.1 ? "rgba(251,191,36,0.22)" : "rgba(52,211,153,0.22)";
 
-// ── driver colors ────────────────────────────────────────────────────────────
-const DRIVER_COLORS: Record<string, { bg: string; color: string }> = {
-  momentum_breakout: { bg: "rgba(56,189,248,0.12)",  color: "#38bdf8" },
-  mean_reversion:    { bg: "rgba(167,139,250,0.12)", color: "#a78bfa" },
-  trend_follow:      { bg: "rgba(251,191,36,0.12)",  color: "#fbbf24" },
-  funding_signal:    { bg: "rgba(52,211,153,0.12)",  color: "#34d399" },
-  sentiment_extreme: { bg: "rgba(248,113,113,0.12)", color: "#f87171" },
-  breakdown_short:   { bg: "rgba(251,146,60,0.12)",  color: "#fb923c" },
-  news_catalyst:     { bg: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" },
+// Driver chip colors
+const DC: Record<string, { bg: string; color: string }> = {
+  momentum_breakout: { bg: "rgba(56,189,248,0.14)",  color: "#38bdf8" },
+  mean_reversion:    { bg: "rgba(167,139,250,0.14)", color: "#a78bfa" },
+  trend_follow:      { bg: "rgba(251,191,36,0.14)",  color: "#fbbf24" },
+  funding_signal:    { bg: "rgba(52,211,153,0.14)",  color: "#34d399" },
+  sentiment_extreme: { bg: "rgba(248,113,113,0.14)", color: "#f87171" },
+  breakdown_short:   { bg: "rgba(251,146,60,0.14)",  color: "#fb923c" },
+  news_catalyst:     { bg: "rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.7)" },
 };
 
-// ── builders ─────────────────────────────────────────────────────────────────
-function buildTradeRows(): string {
-  if (!trades.length) {
-    return `<tr><td colspan="7" style="text-align:center;padding:48px 16px;color:rgba(255,255,255,0.35);font-size:14px;">No trades logged yet. Run <code style="font-family:'Courier New',monospace;background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px;">npm run agent</code> to start.</td></tr>`;
-  }
-  return [...trades]
-    .reverse()
-    .map((t) => {
-      const dc = DRIVER_COLORS[t.statedThesis.primaryDriver] || DRIVER_COLORS.news_catalyst;
-      const tsStr = new Date(t.timestamp).toLocaleString("en-GB", {
-        month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
-      });
-      const sideColor = t.side === "long" ? "#34d399" : "#f87171";
-      const raw = esc(t.statedThesis.naturalLanguage);
-      const shortRat = raw.length > 72 ? raw.slice(0, 72) + "…" : raw;
+const VERDICT_STYLE: Record<string, { bg: string; color: string; label: string }> = {
+  decorative:        { bg: "rgba(251,191,36,0.14)",  color: "#fbbf24", label: "decorative" },
+  real_edge:         { bg: "rgba(52,211,153,0.14)",  color: "#34d399", label: "real edge" },
+  harmful:           { bg: "rgba(248,113,113,0.14)", color: "#f87171", label: "harmful" },
+  insufficient_data: { bg: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.45)", label: "insufficient data" },
+};
 
-      let resultHtml: string;
-      if (!t.outcome) {
-        resultHtml = `<span style="color:rgba(255,255,255,0.35);font-weight:500;font-size:13px;">open</span>`;
-      } else {
-        const p = t.outcome.pnlUsd;
-        const c = p >= 0 ? "#34d399" : "#f87171";
-        resultHtml = `<span style="color:${c};font-weight:600;font-size:13px;">${p >= 0 ? "+" : ""}$${Math.abs(p).toFixed(0)}</span>`;
-      }
+// ── shared CSS ────────────────────────────────────────────────────────────────
+const BASE_CSS = `
+@keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+* { box-sizing:border-box; margin:0; padding:0; }
+html { scroll-behavior:smooth; }
+body {
+  font-family:'Poppins',sans-serif;
+  background:#06060f;
+  color:#fff;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+  hyphens:none;
+  -webkit-hyphens:none;
+}
+::-webkit-scrollbar { width:3px; }
+::-webkit-scrollbar-track { background:#06060f; }
+::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.15); border-radius:2px; }
+a { text-decoration:none; color:inherit; }
+button { font-family:'Poppins',sans-serif; }
+table { width:100%; border-collapse:collapse; }
+code { font-family:'Courier New',monospace; }
 
-      return `<tr data-driver="${esc(t.statedThesis.primaryDriver)}" data-side="${t.side}">
-        <td style="padding:13px 16px;font-size:12px;color:rgba(255,255,255,0.5);white-space:nowrap;border-bottom:1px solid rgba(255,255,255,0.04);">${tsStr}</td>
-        <td style="padding:13px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:${sideColor};">${t.side === "long" ? "LONG" : "SHORT"}</td>
-        <td style="padding:13px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;color:rgba(255,255,255,0.75);white-space:nowrap;font-variant-numeric:tabular-nums;">$${t.entryPrice.toFixed(1)}</td>
-        <td style="padding:13px 16px;border-bottom:1px solid rgba(255,255,255,0.04);"><span style="background:${dc.bg};color:${dc.color};padding:2px 8px;border-radius:5px;font-size:11px;font-family:'Courier New',monospace;white-space:nowrap;">${esc(t.statedThesis.primaryDriver)}</span></td>
-        <td style="padding:13px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;color:rgba(255,255,255,0.6);">${(t.statedThesis.confidence * 100).toFixed(0)}%</td>
-        <td style="padding:13px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;color:rgba(255,255,255,0.45);max-width:300px;line-height:1.5;">${shortRat}</td>
-        <td style="padding:13px 16px;border-bottom:1px solid rgba(255,255,255,0.04);text-align:right;">${resultHtml}</td>
-      </tr>`;
-    })
-    .join("");
+/* page-level */
+.page { display:none; min-height:100vh; }
+.page.active { display:block; }
+.page-home { display:block; } /* home visible by default */
+
+/* inner pages */
+.inner-page { padding:100px 28px 60px; max-width:1200px; margin:0 auto; }
+.inner-page.narrow { max-width:1100px; }
+
+/* page header */
+.ph { margin-bottom:40px; }
+.ph-label { font-size:11px; font-weight:500; letter-spacing:0.12em; text-transform:uppercase; color:#38bdf8; margin-bottom:10px; }
+.ph-title { font-size:clamp(1.5rem,3vw,2.2rem); font-weight:600; letter-spacing:-0.02em; line-height:1.15; }
+.ph-sub { font-size:14px; color:rgba(255,255,255,0.5); margin-top:8px; line-height:1.6; max-width:580px; }
+
+/* cards */
+.card { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09); border-radius:16px; padding:24px; margin-bottom:20px; }
+.card-title { font-size:15px; font-weight:600; margin-bottom:6px; }
+.card-sub { font-size:13px; color:rgba(255,255,255,0.45); margin-bottom:18px; line-height:1.6; }
+
+/* tables */
+.tbl-wrap { overflow-x:auto; border-radius:14px; border:1px solid rgba(255,255,255,0.08); }
+.tbl-wrap table { min-width:600px; }
+thead tr { background:rgba(255,255,255,0.04); border-bottom:1px solid rgba(255,255,255,0.08); }
+th { text-align:left; padding:12px 16px; font-size:10.5px; font-weight:500; color:rgba(255,255,255,0.4); letter-spacing:0.07em; text-transform:uppercase; white-space:nowrap; }
+th.right { text-align:right; }
+td { padding:13px 16px; border-bottom:1px solid rgba(255,255,255,0.04); font-size:13px; color:rgba(255,255,255,0.75); vertical-align:middle; }
+td.right { text-align:right; }
+td.dim { color:rgba(255,255,255,0.45); }
+td.mono { font-family:'Courier New',monospace; font-size:12px; color:rgba(255,255,255,0.6); }
+tbody tr:last-child td { border-bottom:none; }
+
+/* chips / filter buttons */
+.chips { display:flex; flex-wrap:wrap; gap:7px; }
+.chip { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.09); color:rgba(255,255,255,0.6); padding:5px 13px; border-radius:100px; font-size:12px; font-weight:400; cursor:pointer; font-family:'Poppins',sans-serif; transition:all 0.15s; }
+.chip.on { background:rgba(56,189,248,0.16); border-color:rgba(56,189,248,0.4); color:#38bdf8; font-weight:500; }
+
+/* kpi grid */
+.kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:32px; }
+.kpi-card { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09); border-radius:16px; padding:22px 20px; }
+.kpi-num { font-size:2rem; font-weight:600; letter-spacing:-0.03em; line-height:1; margin-bottom:6px; }
+.kpi-lbl { font-size:11px; font-weight:400; color:rgba(255,255,255,0.45); letter-spacing:0.02em; }
+
+/* footer */
+.foot { border-top:1px solid rgba(255,255,255,0.07); padding:28px 28px; margin-top:auto; }
+.foot-inner { max-width:1200px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; }
+.foot-logo { display:flex; align-items:center; gap:9px; font-size:14px; font-weight:600; color:rgba(255,255,255,0.55); letter-spacing:0.04em; }
+.foot-links { display:flex; align-items:center; gap:20px; }
+.foot-links a { font-size:12px; color:rgba(255,255,255,0.35); transition:color 0.15s; }
+.foot-links a:hover { color:rgba(255,255,255,0.7); }
+
+/* doc tabs */
+.doc-tabs { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:28px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:5px; width:fit-content; }
+.doc-tab { background:transparent; border:1px solid transparent; color:rgba(255,255,255,0.45); padding:7px 16px; border-radius:8px; font-size:13px; cursor:pointer; font-weight:400; transition:all 0.15s; }
+.doc-tab.on { background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.14); color:#fff; font-weight:500; }
+.doc-panel { display:none; animation:fadeUp 0.3s ease-out both; }
+.doc-panel.on { display:block; }
+
+/* pre blocks */
+pre { background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.09); border-radius:12px; padding:22px; font-family:'Courier New',monospace; font-size:12.5px; line-height:1.85; color:rgba(255,255,255,0.78); overflow-x:auto; white-space:pre; margin-bottom:16px; }
+
+/* cmd list */
+.cmd-list { display:flex; flex-direction:column; gap:10px; }
+.cmd-card { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:18px 22px; }
+.cmd-card code { font-size:14px; color:#38bdf8; }
+.cmd-card p { font-size:13px; color:rgba(255,255,255,0.45); margin-top:7px; line-height:1.6; }
+
+/* driver tag list in docs */
+.tag-list { display:flex; flex-direction:column; gap:8px; }
+.tag-row { display:flex; gap:16px; align-items:flex-start; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:15px 20px; }
+.tag-row code { font-family:'Courier New',monospace; font-size:12px; flex-shrink:0; min-width:165px; }
+.tag-row span { font-size:13px; color:rgba(255,255,255,0.45); line-height:1.5; }
+
+/* caveat */
+.caveat { font-size:11.5px; color:rgba(255,255,255,0.28); font-style:italic; margin-top:12px; line-height:1.55; border-top:1px dashed rgba(255,255,255,0.09); padding-top:11px; }
+
+/* nav */
+#gb-nav { position:fixed; top:0; left:0; right:0; z-index:100; padding:13px 20px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid transparent; transition:background 0.3s,border-color 0.3s; }
+#gb-nav.scrolled { background:rgba(6,6,15,0.92); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border-bottom-color:rgba(255,255,255,0.08); }
+.nav-pill { display:flex; align-items:center; background:rgba(6,6,15,0.72); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.13); border-radius:14px; padding:8px 18px; gap:0; }
+.nav-logo { display:flex; align-items:center; gap:8px; }
+.nav-logo span { font-size:15px; font-weight:700; color:#fff; letter-spacing:0.05em; }
+#desktop-links { display:flex; gap:2px; margin-left:24px; }
+.nav-btn { background:transparent; border:none; color:rgba(255,255,255,0.65); padding:5px 11px; border-radius:8px; font-size:13px; font-weight:400; cursor:pointer; transition:all 0.15s; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
+.nav-btn:hover { color:#fff; background:rgba(255,255,255,0.07); }
+.nav-btn.on { color:#fff; background:rgba(255,255,255,0.12); font-weight:500; }
+.nav-badge { font-size:10px; background:rgba(56,189,248,0.2); color:#38bdf8; padding:1px 6px; border-radius:4px; }
+.nav-right { display:flex; align-items:center; gap:10px; }
+.gh-link { display:inline-flex; align-items:center; gap:5px; background:#fff; color:#06060f; font-weight:600; font-size:13px; padding:8px 16px; border-radius:100px; }
+#burger-btn { display:none; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:8px 10px; cursor:pointer; align-items:center; justify-content:center; }
+#mobile-menu { display:none; position:fixed; top:70px; left:12px; right:12px; z-index:99; background:rgba(6,6,15,0.97); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border:1px solid rgba(255,255,255,0.11); border-radius:18px; padding:14px; flex-direction:column; gap:3px; }
+.mob-link { color:rgba(255,255,255,0.75); font-size:15px; font-weight:400; padding:12px 16px; border-radius:10px; display:block; border:none; background:none; cursor:pointer; text-align:left; font-family:'Poppins',sans-serif; transition:background 0.15s; }
+.mob-link:hover { background:rgba(255,255,255,0.07); }
+`;
+
+// ── row builders ─────────────────────────────────────────────────────────────
+function tradeRows(): string {
+  if (!trades.length)
+    return `<tr><td colspan="7" style="text-align:center;padding:48px;color:rgba(255,255,255,0.35);font-size:14px;">No trades yet. Run <code>npm run agent</code> to start.</td></tr>`;
+
+  return [...trades].reverse().map(t => {
+    const dc = DC[t.statedThesis.primaryDriver] ?? DC.news_catalyst;
+    const ts = new Date(t.timestamp).toLocaleString("en-GB", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    const sideColor = t.side === "long" ? "#34d399" : "#f87171";
+    const raw = esc(t.statedThesis.naturalLanguage);
+    const short = raw.length > 70 ? raw.slice(0, 70) + "…" : raw;
+    let result: string;
+    if (!t.outcome) {
+      result = `<span style="color:rgba(255,255,255,0.35);font-size:12px;font-weight:500;">open</span>`;
+    } else {
+      const p = t.outcome.pnlUsd;
+      result = `<span style="color:${p >= 0 ? "#34d399" : "#f87171"};font-weight:600;font-size:13px;">${p >= 0 ? "+" : ""}$${Math.abs(p).toFixed(0)}</span>`;
+    }
+    return `<tr data-driver="${esc(t.statedThesis.primaryDriver)}" data-side="${t.side}">
+      <td class="mono">${ts}</td>
+      <td style="font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:${sideColor};">${t.side === "long" ? "LONG" : "SHORT"}</td>
+      <td class="mono">$${t.entryPrice.toFixed(1)}</td>
+      <td><span style="background:${dc.bg};color:${dc.color};padding:2px 8px;border-radius:5px;font-size:11px;font-family:'Courier New',monospace;white-space:nowrap;">${esc(t.statedThesis.primaryDriver)}</span></td>
+      <td class="right dim">${(t.statedThesis.confidence * 100).toFixed(0)}%</td>
+      <td class="dim" style="font-size:12px;max-width:280px;line-height:1.5;">${short}</td>
+      <td class="right">${result}</td>
+    </tr>`;
+  }).join("");
 }
 
-function buildSignalRows(): string {
+function signalRows(): string {
   if (!report?.attribution?.length)
-    return `<div style="padding:24px;text-align:center;color:rgba(255,255,255,0.35);">No signal data yet. Run <code style="font-family:'Courier New',monospace;background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px;">npm run autopsy</code>.</div>`;
-
-  const maxCorr = Math.max(...report.attribution.map((a) => Math.abs(a.correlationWithPnl)));
-  return report.attribution
-    .map((a) => {
-      const isPos = a.correlationWithPnl >= 0;
-      const barPct = maxCorr > 0 ? ((Math.abs(a.correlationWithPnl) / maxCorr) * 100).toFixed(1) : "0";
-      const barColor = isPos ? "linear-gradient(90deg,#38bdf8,#0ea5e9)" : "linear-gradient(90deg,#f87171,#ef4444)";
-      const corrLabel = (a.correlationWithPnl >= 0 ? "+" : "") + a.correlationWithPnl.toFixed(2);
-      return `<div style="display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.04);">
-        <span style="font-family:'Courier New',monospace;font-size:12px;color:rgba(255,255,255,0.65);width:130px;flex-shrink:0;">${esc(a.feature)}</span>
-        <div style="flex:1;background:rgba(255,255,255,0.07);border-radius:4px;height:7px;overflow:hidden;">
-          <div style="width:${barPct}%;height:7px;border-radius:4px;background:${barColor};"></div>
-        </div>
-        <span style="color:${isPos ? "#38bdf8" : "#f87171"};font-size:13px;font-weight:600;width:44px;text-align:right;flex-shrink:0;font-family:'Courier New',monospace;">${corrLabel}</span>
-      </div>`;
-    })
-    .join("");
+    return `<div style="padding:24px;text-align:center;color:rgba(255,255,255,0.35);">No data. Run <code>npm run autopsy</code>.</div>`;
+  const maxC = Math.max(...report.attribution.map(a => Math.abs(a.correlationWithPnl)));
+  return report.attribution.map(a => {
+    const pos = a.correlationWithPnl >= 0;
+    const w = maxC > 0 ? (Math.abs(a.correlationWithPnl) / maxC * 100).toFixed(1) : "0";
+    const bar = pos ? "linear-gradient(90deg,#38bdf8,#0ea5e9)" : "linear-gradient(90deg,#f87171,#ef4444)";
+    const lbl = (a.correlationWithPnl >= 0 ? "+" : "") + a.correlationWithPnl.toFixed(2);
+    return `<div style="display:flex;align-items:center;gap:14px;padding:13px 20px;border-bottom:1px solid rgba(255,255,255,0.04);">
+      <span style="font-family:'Courier New',monospace;font-size:12px;color:rgba(255,255,255,0.65);width:128px;flex-shrink:0;">${esc(a.feature)}</span>
+      <div style="flex:1;background:rgba(255,255,255,0.07);border-radius:4px;height:7px;overflow:hidden;">
+        <div style="width:${w}%;height:7px;border-radius:4px;background:${bar};"></div>
+      </div>
+      <span style="color:${pos ? "#38bdf8" : "#f87171"};font-size:13px;font-weight:600;width:44px;text-align:right;flex-shrink:0;font-family:'Courier New',monospace;">${lbl}</span>
+    </div>`;
+  }).join("");
 }
 
-function buildDriverRows(): string {
+function driverRows(): string {
   if (!report?.drivers?.length)
-    return `<tr><td colspan="7" style="text-align:center;padding:40px;color:rgba(255,255,255,0.35);">No driver data yet.</td></tr>`;
-
-  const VERDICT: Record<string, { bg: string; color: string; label: string }> = {
-    decorative:        { bg: "rgba(251,191,36,0.12)",  color: "#fbbf24", label: "decorative" },
-    real_edge:         { bg: "rgba(52,211,153,0.12)",  color: "#34d399", label: "real edge" },
-    harmful:           { bg: "rgba(248,113,113,0.12)", color: "#f87171", label: "harmful" },
-    insufficient_data: { bg: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.4)", label: "insufficient data" },
-  };
-
-  return report.drivers
-    .map((d) => {
-      const v = VERDICT[d.verdict] ?? VERDICT.decorative;
-      const edgePp = (d.edge * 100).toFixed(1);
-      const edgeSign = d.edge >= 0 ? "+" : "";
-      const diffColor = d.edge > 0.02 ? "#34d399" : d.edge < -0.02 ? "#f87171" : "rgba(255,255,255,0.4)";
-      const ls = `${d.longCited ?? 0}L / ${d.shortCited ?? 0}S`;
-      return `<tr>
-        <td style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.04);"><code style="font-family:'Courier New',monospace;font-size:11px;background:rgba(255,255,255,0.07);padding:2px 7px;border-radius:4px;color:rgba(255,255,255,0.75);">${esc(d.driver)}</code></td>
-        <td style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.04);text-align:right;font-size:13px;color:rgba(255,255,255,0.6);">${d.timesCited}×</td>
-        <td style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;color:rgba(255,255,255,0.45);">${ls}</td>
-        <td style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.04);text-align:right;font-size:13px;font-weight:500;color:rgba(255,255,255,0.8);">${pct(d.winRateWhenCited)}</td>
-        <td style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.04);text-align:right;font-size:13px;color:rgba(255,255,255,0.4);">${pct(d.baselineWinRate)}</td>
-        <td style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.04);text-align:right;"><span style="color:${diffColor};font-weight:600;font-size:13px;">${edgeSign}${edgePp}pp</span></td>
-        <td style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.04);"><span style="background:${v.bg};color:${v.color};padding:2px 9px;border-radius:100px;font-size:11px;font-weight:500;white-space:nowrap;">${v.label}</span></td>
-      </tr>`;
-    })
-    .join("");
+    return `<tr><td colspan="7" style="text-align:center;padding:40px;color:rgba(255,255,255,0.35);">No data yet.</td></tr>`;
+  return report.drivers.map(d => {
+    const v = VERDICT_STYLE[d.verdict] ?? VERDICT_STYLE.decorative;
+    const ep = (d.edge * 100).toFixed(1);
+    const dc = d.edge > 0.02 ? "#34d399" : d.edge < -0.02 ? "#f87171" : "rgba(255,255,255,0.4)";
+    const ls = `${d.longCited ?? 0}L / ${d.shortCited ?? 0}S`;
+    return `<tr>
+      <td><code style="background:rgba(255,255,255,0.08);padding:2px 7px;border-radius:4px;font-size:11px;color:rgba(255,255,255,0.8);">${esc(d.driver)}</code></td>
+      <td class="right dim">${d.timesCited}x</td>
+      <td class="dim" style="font-size:12px;">${ls}</td>
+      <td class="right" style="font-weight:500;">${pct(d.winRateWhenCited)}</td>
+      <td class="right dim">${pct(d.baselineWinRate)}</td>
+      <td class="right"><span style="color:${dc};font-weight:600;font-size:13px;">${d.edge >= 0 ? "+" : ""}${ep}pp</span></td>
+      <td><span style="background:${v.bg};color:${v.color};padding:2px 9px;border-radius:100px;font-size:11px;font-weight:500;white-space:nowrap;">${v.label}</span></td>
+    </tr>`;
+  }).join("");
 }
 
-function buildCalRows(): string {
+function calRows(): string {
   if (!report?.calibration?.length)
-    return `<tr><td colspan="5" style="text-align:center;padding:40px;color:rgba(255,255,255,0.35);">No calibration data yet.</td></tr>`;
-
-  return report.calibration
-    .map((c) => {
-      const over = c.gap > 0.1;
-      const gapStr = (c.gap > 0 ? "+" : "") + (c.gap * 100).toFixed(1) + "pp" + (over ? " ← overconfident" : "");
-      return `<tr>
-        <td style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;font-family:'Courier New',monospace;color:rgba(255,255,255,0.7);">${esc(c.label)}</td>
-        <td style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.04);text-align:right;font-size:13px;color:rgba(255,255,255,0.55);">${c.trades}</td>
-        <td style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.04);text-align:right;font-size:13px;color:rgba(255,255,255,0.7);">${pct(c.avgConfidence)}</td>
-        <td style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.04);text-align:right;"><span style="color:${c.actualWinRate > 0.5 ? "#34d399" : "#f87171"};font-weight:500;font-size:13px;">${pct(c.actualWinRate)}</span></td>
-        <td style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.04);text-align:right;"><span style="color:${over ? "#f87171" : "#34d399"};font-weight:600;font-size:13px;">${gapStr}</span></td>
-      </tr>`;
-    })
-    .join("");
+    return `<tr><td colspan="5" style="text-align:center;padding:40px;color:rgba(255,255,255,0.35);">No data yet.</td></tr>`;
+  return report.calibration.map(c => {
+    const over = c.gap > 0.1;
+    return `<tr>
+      <td class="mono">${esc(c.label)}</td>
+      <td class="right dim">${c.trades}</td>
+      <td class="right">${pct(c.avgConfidence)}</td>
+      <td class="right"><span style="color:${c.actualWinRate > 0.5 ? "#34d399" : "#f87171"};font-weight:500;">${pct(c.actualWinRate)}</span></td>
+      <td class="right"><span style="color:${over ? "#f87171" : "#34d399"};font-weight:600;">${c.gap > 0 ? "+" : ""}${(c.gap * 100).toFixed(1)}pp${over ? " overconfident" : ""}</span></td>
+    </tr>`;
+  }).join("");
 }
 
-function buildHeadline(): string {
-  if (!report) return "No autopsy data yet. Run <code>npm run autopsy</code>.";
-  const topDriver = [...report.drivers].sort((a, b) => b.timesCited - a.timesCited)[0];
-  const topAttr = report.attribution[0];
-  if (!topDriver || !topAttr) return esc(report.headline);
-  const citedWr = pct(topDriver.winRateWhenCited);
-  const baseWr = pct(topDriver.baselineWinRate);
-  const corr = topAttr.correlationWithPnl.toFixed(2);
-  return `The agent's most-cited reason "<strong style="color:rgba(255,255,255,0.85);">${esc(topDriver.driver)}</strong>" is ${esc(topDriver.verdict.replace(/_/g, " "))} (${citedWr} win vs ${baseWr} baseline). Its PnL is really driven by <strong style="color:rgba(255,255,255,0.85);">${esc(topAttr.feature)}</strong> (corr ${corr}).`;
+function headline(): string {
+  if (!report) return "Run <code>npm run autopsy</code> to generate the report.";
+  const top = [...report.drivers].sort((a, b) => b.timesCited - a.timesCited)[0];
+  const attr = report.attribution[0];
+  if (!top || !attr) return esc(report.headline);
+  return `Most cited driver <strong style="color:rgba(255,255,255,0.85);">${esc(top.driver)}</strong> is ${esc(top.verdict.replace(/_/g, " "))} (${pct(top.winRateWhenCited)} win vs ${pct(top.baselineWinRate)} baseline). PnL is really driven by <strong style="color:rgba(255,255,255,0.85);">${esc(attr.feature)}</strong> (corr ${attr.correlationWithPnl.toFixed(2)}).`;
 }
 
-const assetLine = report?.assets?.length ? ` Across ${report.assets.length} asset(s): ${report.assets.join(", ")}.` : "";
-const attrLeadText = report?.attribution?.[0]
-  ? `The strongest predictor of the agent's profits was <strong style="color:rgba(255,255,255,0.75);">${esc(report.attribution[0].feature)}</strong> (correlation ${report.attribution[0].correlationWithPnl.toFixed(2)}). Blue = predicted wins. Red = predicted losses. PnL is net of round-trip trading friction.${assetLine}`
+const assetNote = report?.assets?.length ? ` Across ${report.assets.join(", ")}.` : "";
+const attrSub = report?.attribution?.[0]
+  ? `Strongest predictor: <strong style="color:rgba(255,255,255,0.75);">${esc(report.attribution[0].feature)}</strong> (r = ${report.attribution[0].correlationWithPnl.toFixed(2)}). Blue bars predicted wins, red bars predicted losses. PnL is net of round-trip friction.${assetNote}`
   : "Run autopsy to see signal attribution.";
+
+// ── nav SVG logo ──────────────────────────────────────────────────────────────
+const LOGO_SVG = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+  <polygon points="10,2 18,6 10,10 2,6" fill="rgba(255,255,255,0.22)" stroke="rgba(255,255,255,0.8)" stroke-width="0.7" stroke-linejoin="round"/>
+  <polygon points="2,6 10,10 10,18 2,14" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.8)" stroke-width="0.7" stroke-linejoin="round"/>
+  <polygon points="10,10 18,6 18,14 10,18" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.8)" stroke-width="0.7" stroke-linejoin="round"/>
+</svg>`;
+
+const FOOTER = `<footer style="background:#03030a;border-top:1px solid rgba(255,255,255,0.07);padding:28px;">
+  <div class="foot-inner">
+    <div class="foot-logo">
+      ${LOGO_SVG}
+      <span>glassbox</span>
+      <span style="font-size:11px;font-weight:400;color:rgba(255,255,255,0.25);margin-left:6px;">open-source agent audit layer</span>
+    </div>
+    <div class="foot-links">
+      <span style="font-size:11px;color:rgba(255,255,255,0.25);">Bitget AI Hackathon S1</span>
+      <a href="https://github.com/IamHarrie-Labs/glass-box" target="_blank">github.com/IamHarrie-Labs/glass-box</a>
+    </div>
+  </div>
+</footer>`;
 
 // ── full HTML ─────────────────────────────────────────────────────────────────
 const HTML = `<!doctype html>
@@ -188,384 +299,307 @@ const HTML = `<!doctype html>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Glass Box · Agent Autopsy Engine</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link href="https://db.onlinewebfonts.com/c/304a6edcec9f8858eeaafc2ac18243f4?family=Askan+Light" rel="stylesheet" type="text/css">
-<style>
-@keyframes fadeUp { from { opacity:0; transform:translateY(28px); } to { opacity:1; transform:translateY(0); } }
-* { box-sizing:border-box; margin:0; padding:0; }
-html { scroll-behavior:smooth; }
-body { font-family:'Inter',sans-serif; background:#06060f; color:#fff; -webkit-font-smoothing:antialiased; overflow-x:hidden; }
-::-webkit-scrollbar { width:3px; }
-::-webkit-scrollbar-track { background:#06060f; }
-::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.15); border-radius:2px; }
-a { text-decoration:none; }
-table { width:100%; border-collapse:collapse; }
-code { font-family:'Courier New',monospace; }
-</style>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>${BASE_CSS}</style>
 </head>
 <body>
 
-<!-- ── FIXED NAV ──────────────────────────────────────────────────────────── -->
-<nav id="gb-nav" style="position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;background:transparent;border-bottom:1px solid transparent;transition:background 0.3s,border-color 0.3s;">
-  <div style="display:flex;align-items:center;background:rgba(0,0,0,0.28);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:9px 20px;">
-    <svg width="22" height="22" viewBox="0 0 20 20" fill="none" style="flex-shrink:0;">
-      <polygon points="10,2 18,6 10,10 2,6" fill="rgba(255,255,255,0.22)" stroke="rgba(255,255,255,0.75)" stroke-width="0.7" stroke-linejoin="round"/>
-      <polygon points="2,6 10,10 10,18 2,14" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.75)" stroke-width="0.7" stroke-linejoin="round"/>
-      <polygon points="10,10 18,6 18,14 10,18" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.75)" stroke-width="0.7" stroke-linejoin="round"/>
-    </svg>
-    <span style="font-family:'Askan Light',Georgia,serif;color:#fff;font-size:16px;letter-spacing:0.07em;margin-left:8px;white-space:nowrap;">glassbox</span>
-    <div id="desktop-nav" style="display:flex;gap:2px;margin-left:28px;">
-      <a href="#home"   id="nav-home"   style="color:#fff;background:rgba(255,255,255,0.1);padding:5px 12px;border-radius:8px;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:all 0.15s;">Home</a>
-      <a href="#logs"   id="nav-logs"   style="color:rgba(255,255,255,0.58);background:transparent;padding:5px 12px;border-radius:8px;font-size:13px;font-weight:400;display:inline-flex;align-items:center;gap:6px;transition:all 0.15s;">Logs <span style="font-size:10px;background:rgba(56,189,248,0.18);color:#38bdf8;padding:1px 6px;border-radius:4px;">${trades.length}</span></a>
-      <a href="#report" id="nav-report" style="color:rgba(255,255,255,0.58);background:transparent;padding:5px 12px;border-radius:8px;font-size:13px;font-weight:400;display:inline-flex;align-items:center;gap:6px;transition:all 0.15s;">Report</a>
-      <a href="#docs"   id="nav-docs"   style="color:rgba(255,255,255,0.58);background:transparent;padding:5px 12px;border-radius:8px;font-size:13px;font-weight:400;display:inline-flex;align-items:center;gap:6px;transition:all 0.15s;">Docs</a>
+<!-- ── FIXED NAV ─────────────────────────────────────────────────────────── -->
+<nav id="gb-nav">
+  <div class="nav-pill">
+    <div class="nav-logo">
+      ${LOGO_SVG}
+      <span>glassbox</span>
+    </div>
+    <div id="desktop-links">
+      <button class="nav-btn on" id="nav-home"   onclick="navigate('home')">Home</button>
+      <button class="nav-btn"    id="nav-logs"   onclick="navigate('logs')">Logs <span class="nav-badge">${trades.length}</span></button>
+      <button class="nav-btn"    id="nav-report" onclick="navigate('report')">Report</button>
+      <button class="nav-btn"    id="nav-docs"   onclick="navigate('docs')">Docs</button>
     </div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px;">
-    <a id="gh-btn" href="https://github.com/IamHarrie-Labs/glass-box" target="_blank" style="display:inline-flex;align-items:center;background:#fff;color:#06060f;font-weight:600;font-size:13px;padding:9px 18px;border-radius:100px;letter-spacing:0.01em;">
-      <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" style="margin-right:5px;flex-shrink:0;"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+  <div class="nav-right">
+    <a class="gh-link" href="https://github.com/IamHarrie-Labs/glass-box" target="_blank" id="gh-link">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
       GitHub
     </a>
-    <button id="burger-btn" onclick="toggleMenu()" style="display:none;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:9px 10px;cursor:pointer;align-items:center;justify-content:center;" aria-label="Menu">
+    <button id="burger-btn" onclick="toggleMenu()" aria-label="Menu">
       <span id="burger-open"><svg width="18" height="18" viewBox="0 0 18 18" stroke="white" stroke-width="1.8" fill="none"><line x1="2" y1="5" x2="16" y2="5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13" x2="16" y2="13"/></svg></span>
-      <span id="burger-close" style="display:none;"><svg width="18" height="18" viewBox="0 0 18 18" stroke="white" stroke-width="1.8" fill="none"><line x1="3" y1="3" x2="15" y2="15"/><line x1="15" y1="3" x2="3" y2="15"/></svg></span>
+      <span id="burger-close" style="display:none"><svg width="18" height="18" viewBox="0 0 18 18" stroke="white" stroke-width="1.8" fill="none"><line x1="3" y1="3" x2="15" y2="15"/><line x1="15" y1="3" x2="3" y2="15"/></svg></span>
     </button>
   </div>
 </nav>
 
 <!-- Mobile menu -->
-<div id="gb-mobile-menu" style="display:none;position:fixed;top:72px;left:12px;right:12px;z-index:99;background:rgba(6,6,15,0.97);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:16px;flex-direction:column;gap:4px;">
-  <a href="#home"   onclick="closeMenu()" style="color:rgba(255,255,255,0.75);font-size:15px;padding:12px 16px;border-radius:10px;display:block;">Home</a>
-  <a href="#logs"   onclick="closeMenu()" style="color:rgba(255,255,255,0.75);font-size:15px;padding:12px 16px;border-radius:10px;display:block;">Logs <span style="font-size:10px;background:rgba(56,189,248,0.2);color:#38bdf8;padding:1px 6px;border-radius:4px;margin-left:4px;">${trades.length}</span></a>
-  <a href="#report" onclick="closeMenu()" style="color:rgba(255,255,255,0.75);font-size:15px;padding:12px 16px;border-radius:10px;display:block;">Report</a>
-  <a href="#docs"   onclick="closeMenu()" style="color:rgba(255,255,255,0.75);font-size:15px;padding:12px 16px;border-radius:10px;display:block;">Docs</a>
-  <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.07);">
-    <a href="https://github.com/IamHarrie-Labs/glass-box" target="_blank" style="display:block;background:white;color:#06060f;font-weight:600;font-size:13px;padding:12px 20px;border-radius:100px;text-align:center;">View on GitHub</a>
+<div id="mobile-menu">
+  <button class="mob-link" onclick="navigate('home');closeMenu()">Home</button>
+  <button class="mob-link" onclick="navigate('logs');closeMenu()">Logs <span class="nav-badge" style="margin-left:6px;">${trades.length}</span></button>
+  <button class="mob-link" onclick="navigate('report');closeMenu()">Report</button>
+  <button class="mob-link" onclick="navigate('docs');closeMenu()">Docs</button>
+  <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.08);">
+    <a href="https://github.com/IamHarrie-Labs/glass-box" target="_blank" style="display:block;background:#fff;color:#06060f;font-weight:600;font-size:13px;padding:12px 20px;border-radius:100px;text-align:center;">View on GitHub</a>
   </div>
 </div>
 
-<!-- ── HERO ──────────────────────────────────────────────────────────────────── -->
-<section id="home" style="position:relative;height:100vh;min-height:600px;overflow:hidden;scroll-margin-top:80px;">
-  <video autoplay loop muted playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center center;">
-    <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260618_174853_aac61aa2-0f3f-4cf1-bc78-7f657dd11164.mp4" type="video/mp4">
-  </video>
-  <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(6,6,15,0.85) 0%,rgba(6,6,15,0.1) 50%,transparent 100%);z-index:1;"></div>
-  <div style="position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;padding:24px 28px 40px;">
-    <div style="flex:1;"></div>
-    <div style="display:flex;flex-direction:row;align-items:flex-end;justify-content:space-between;gap:32px;flex-wrap:wrap;">
-      <div style="animation:fadeUp 0.9s ease-out both;max-width:680px;">
-        <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,0,0,0.3);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.1);border-radius:100px;padding:6px 14px;margin-bottom:24px;">
-          <span style="width:6px;height:6px;border-radius:50%;background:#38bdf8;display:inline-block;"></span>
-          <span style="font-size:11px;color:rgba(255,255,255,0.7);letter-spacing:0.04em;">Track 2 · Trading Infra · Bitget AI Hackathon S1</span>
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     PAGE: HOME
+═══════════════════════════════════════════════════════════════════════════ -->
+<div id="page-home" class="page page-home">
+  <section style="position:relative;height:100vh;min-height:580px;overflow:hidden;">
+    <video autoplay loop muted playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;">
+      <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260618_174853_aac61aa2-0f3f-4cf1-bc78-7f657dd11164.mp4" type="video/mp4">
+    </video>
+    <!-- Dark vignette -->
+    <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(6,6,15,0.92) 0%,rgba(6,6,15,0.25) 55%,rgba(6,6,15,0.05) 100%);z-index:1;"></div>
+
+    <!-- Hero content: lower portion -->
+    <div style="position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;padding:22px 28px 44px;">
+      <div style="flex:1;"></div>
+      <div style="display:flex;flex-direction:row;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;">
+
+        <!-- Left: headline + CTAs -->
+        <div style="animation:fadeUp 0.8s ease-out both;max-width:560px;">
+          <h1 style="font-size:clamp(1.55rem,2.8vw,2.5rem);font-weight:700;line-height:1.15;letter-spacing:-0.025em;color:#fff;margin-bottom:16px;">
+            Your agent explains every trade.<br>We audit whether those explanations hold up.
+          </h1>
+          <p style="font-size:clamp(13px,1.2vw,14.5px);color:rgba(255,255,255,0.72);max-width:460px;line-height:1.7;margin-bottom:26px;font-weight:300;">
+            Glass Box locks in your LLM trading agent's stated reasoning before outcomes are known, runs a statistical autopsy after each close, and feeds verified findings back into the agent. Real drivers stay. Decorative reasoning gets flagged. Harmful drivers get removed.
+          </p>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;">
+            <button onclick="navigate('logs')" style="background:#fff;color:#06060f;font-weight:600;font-size:13.5px;padding:12px 26px;border-radius:100px;border:none;cursor:pointer;font-family:'Poppins',sans-serif;">View live logs</button>
+            <button onclick="navigate('report')" style="background:rgba(255,255,255,0.1);color:#fff;font-weight:500;font-size:13.5px;padding:12px 26px;border-radius:100px;border:1px solid rgba(255,255,255,0.18);cursor:pointer;font-family:'Poppins',sans-serif;backdrop-filter:blur(8px);">Autopsy report</button>
+          </div>
         </div>
-        <h1 style="font-family:'Askan Light',Georgia,serif;font-size:clamp(2.4rem,6vw,5rem);line-height:1.02;letter-spacing:-0.02em;color:#fff;margin-bottom:20px;">Your agent sounds confident.<br>We check if it's right.</h1>
-        <p style="font-size:clamp(14px,1.5vw,17px);color:rgba(255,255,255,0.68);max-width:480px;line-height:1.65;margin-bottom:28px;">Glass Box measures the gap between what an LLM trading agent <em>says</em> drove its decision and what actually drove its PnL. We call that gap the Self-Deception Index.</p>
-        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
-          <a href="#logs" style="background:#fff;color:#06060f;font-weight:600;font-size:14px;padding:13px 28px;border-radius:100px;letter-spacing:0.01em;">View live logs</a>
-          <a href="#docs" style="background:rgba(255,255,255,0.1);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#fff;font-weight:500;font-size:14px;padding:13px 28px;border-radius:100px;border:1px solid rgba(255,255,255,0.15);">Read the docs</a>
+
+        <!-- Right: stat chips -->
+        <div style="display:flex;flex-direction:column;gap:7px;animation:fadeUp 0.9s ease-out 0.15s both;min-width:175px;">
+          <div style="background:rgba(6,6,15,0.88);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.18);border-radius:12px;padding:11px 16px;">
+            <div style="font-size:22px;font-weight:700;color:#fff;line-height:1;">${trades.length}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.72);margin-top:3px;font-weight:400;">Trades logged</div>
+          </div>
+          <div style="background:rgba(6,6,15,0.88);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.18);border-radius:12px;padding:11px 16px;">
+            <div style="font-size:22px;font-weight:700;color:#fff;line-height:1;">${closedTrades.length}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.72);margin-top:3px;font-weight:400;">Positions closed</div>
+          </div>
+          <div style="background:${sdiBg};backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid ${sdiBorder};border-radius:12px;padding:11px 16px;">
+            <div style="font-size:22px;font-weight:700;color:${sdiColor};line-height:1;">${sdiText}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.72);margin-top:3px;font-weight:400;">Self-Deception Index</div>
+          </div>
+          <div style="background:${ocgBg};backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid ${ocgBorder};border-radius:12px;padding:11px 16px;">
+            <div style="font-size:22px;font-weight:700;color:${ocgColor};line-height:1;">${ocgText}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.72);margin-top:3px;font-weight:400;">Overconfidence Gap</div>
+          </div>
         </div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:8px;animation:fadeUp 1s ease-out 0.2s both;min-width:180px;">
-        <div style="background:rgba(0,0,0,0.3);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px 16px;">
-          <div style="font-family:'Askan Light',Georgia,serif;font-size:22px;color:#fff;letter-spacing:-0.02em;">${trades.length}</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.55);margin-top:2px;">Trades logged</div>
-        </div>
-        <div style="background:rgba(0,0,0,0.3);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px 16px;">
-          <div style="font-family:'Askan Light',Georgia,serif;font-size:22px;color:#fff;letter-spacing:-0.02em;">${closedTrades.length}</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.55);margin-top:2px;">Positions closed</div>
-        </div>
-        <div style="background:rgba(0,0,0,0.3);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid ${sdiAccent};border-radius:12px;padding:12px 16px;">
-          <div style="font-family:'Askan Light',Georgia,serif;font-size:22px;color:${sdiColor};letter-spacing:-0.02em;">${report ? pct(report.selfDeceptionIndex) : "—"}</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.55);margin-top:2px;">Self-deception index</div>
-        </div>
-        <div style="background:rgba(0,0,0,0.3);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid ${ocgCardBorder};border-radius:12px;padding:12px 16px;">
-          <div style="font-family:'Askan Light',Georgia,serif;font-size:22px;color:${ocgColor};letter-spacing:-0.02em;">${report ? pct(report.overconfidenceGap) : "—"}</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.55);margin-top:2px;">Overconfidence gap</div>
-        </div>
+
       </div>
     </div>
-  </div>
-</section>
+  </section>
+</div>
 
-<!-- ── HOW IT WORKS ──────────────────────────────────────────────────────────── -->
-<section id="howitworks" style="background:#08081a;padding:96px 28px;scroll-margin-top:80px;">
-  <div style="max-width:1100px;margin:0 auto;">
-    <p style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#38bdf8;margin-bottom:12px;font-weight:500;">How it works</p>
-    <h2 style="font-family:'Askan Light',Georgia,serif;font-size:clamp(1.8rem,4vw,3rem);line-height:1.08;letter-spacing:-0.01em;margin-bottom:12px;">Two systems. One surfaces<br>reasoning. The other audits it.</h2>
-    <p style="font-size:15px;color:rgba(255,255,255,0.55);margin-bottom:56px;max-width:480px;line-height:1.6;">Every decision the agent makes is locked in before the outcome. Then the autopsy engine tears it apart.</p>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;">
-
-      <!-- Without Glass Box -->
-      <div style="background:rgba(248,113,113,0.04);border:1px solid rgba(248,113,113,0.12);border-radius:20px;padding:32px;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:28px;">
-          <div style="width:8px;height:8px;border-radius:50%;background:#f87171;flex-shrink:0;"></div>
-          <span style="font-size:12px;font-weight:600;color:#f87171;letter-spacing:0.06em;text-transform:uppercase;">Without Glass Box</span>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:0;">
-          ${[
-            ["?", "Agent trades", "Produces confident natural-language rationale per trade"],
-            ["!", "Story is accepted", '"Going long — momentum breakout with bullish funding"'],
-            ["≈", "No verification", "Nobody checks if that reason actually predicted the outcome"],
-            ["↘", "Silent drift", "Agent cites decorative reasons while losing on hidden drivers"],
-            ["✕", "No insight", "You only learn what went wrong after the losses add up"],
-          ].map(([icon, title, body], i, arr) => `
-          <div style="display:flex;gap:16px;${i < arr.length - 1 ? "padding-bottom:24px;" : ""}">
-            <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">
-              <div style="width:32px;height:32px;border-radius:50%;background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.2);display:flex;align-items:center;justify-content:center;font-size:13px;color:#f87171;">${icon}</div>
-              ${i < arr.length - 1 ? '<div style="width:1px;flex:1;background:rgba(248,113,113,0.12);margin-top:8px;"></div>' : ""}
-            </div>
-            <div style="padding-top:4px;">
-              <div style="font-size:13px;font-weight:500;color:#fff;margin-bottom:4px;">${title}</div>
-              <div style="font-size:12px;color:rgba(255,255,255,0.45);line-height:1.55;">${body}</div>
-            </div>
-          </div>`).join("")}
-        </div>
-      </div>
-
-      <!-- With Glass Box -->
-      <div style="background:rgba(56,189,248,0.04);border:1px solid rgba(56,189,248,0.15);border-radius:20px;padding:32px;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:28px;">
-          <div style="width:8px;height:8px;border-radius:50%;background:#38bdf8;flex-shrink:0;"></div>
-          <span style="font-size:12px;font-weight:600;color:#38bdf8;letter-spacing:0.06em;text-transform:uppercase;">With Glass Box</span>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:0;">
-          ${[
-            ["?", "Agent trades", "Produces confident natural-language rationale per trade"],
-            ["⬡", "Thesis locked", "Decision record written before outcome — agent cannot revise it"],
-            ["⊕", "Autopsy engine runs", "Signal attribution · Self-deception detection · Confidence calibration"],
-            ["◎", "Verdicts issued", "Each stated driver scored: real edge / decorative / harmful"],
-            ["↺", "Agent improves", "Self-Deception Index tracked over time. Drift caught early."],
-          ].map(([icon, title, body], i, arr) => `
-          <div style="display:flex;gap:16px;${i < arr.length - 1 ? "padding-bottom:24px;" : ""}">
-            <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">
-              <div style="width:32px;height:32px;border-radius:50%;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.25);display:flex;align-items:center;justify-content:center;font-size:13px;color:#38bdf8;">${icon}</div>
-              ${i < arr.length - 1 ? '<div style="width:1px;flex:1;background:rgba(56,189,248,0.12);margin-top:8px;"></div>' : ""}
-            </div>
-            <div style="padding-top:4px;">
-              <div style="font-size:13px;font-weight:500;color:#fff;margin-bottom:4px;">${title}</div>
-              <div style="font-size:12px;color:rgba(255,255,255,0.45);line-height:1.55;">${body}</div>
-            </div>
-          </div>`).join("")}
-        </div>
-      </div>
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     PAGE: LOGS
+═══════════════════════════════════════════════════════════════════════════ -->
+<div id="page-logs" class="page">
+  <div class="inner-page">
+    <div class="ph">
+      <div class="ph-label">Live data</div>
+      <div class="ph-title">Live trade log</div>
+      <div class="ph-sub">Every decision the agent made, with its stated thesis locked in before the outcome was known.</div>
     </div>
-  </div>
-</section>
 
-<!-- ── LIVE TRADE LOG ─────────────────────────────────────────────────────────── -->
-<section id="logs" style="background:#06060f;padding:96px 28px;scroll-margin-top:80px;">
-  <div style="max-width:1200px;margin:0 auto;">
-    <div style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:36px;">
-      <div>
-        <p style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#38bdf8;margin-bottom:12px;font-weight:500;">Live data</p>
-        <h2 style="font-family:'Askan Light',Georgia,serif;font-size:clamp(1.6rem,3.5vw,2.6rem);line-height:1.1;letter-spacing:-0.01em;">Live trade log</h2>
-        <p style="font-size:14px;color:rgba(255,255,255,0.45);margin-top:8px;line-height:1.55;">Every decision the agent made, with its stated thesis locked in before the outcome was known.</p>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:20px;">
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;flex-wrap:wrap;gap:7px;align-items:center;">
+          <span style="font-size:10.5px;color:rgba(255,255,255,0.35);font-weight:500;letter-spacing:0.06em;text-transform:uppercase;margin-right:2px;">Driver</span>
+          <button class="chip on" data-chip-driver="all"               onclick="setDriver('all')">All drivers</button>
+          <button class="chip"    data-chip-driver="momentum_breakout" onclick="setDriver('momentum_breakout')">momentum_breakout</button>
+          <button class="chip"    data-chip-driver="mean_reversion"    onclick="setDriver('mean_reversion')">mean_reversion</button>
+          <button class="chip"    data-chip-driver="trend_follow"      onclick="setDriver('trend_follow')">trend_follow</button>
+          <button class="chip"    data-chip-driver="funding_signal"    onclick="setDriver('funding_signal')">funding_signal</button>
+          <button class="chip"    data-chip-driver="sentiment_extreme" onclick="setDriver('sentiment_extreme')">sentiment_extreme</button>
+          <button class="chip"    data-chip-driver="breakdown_short"   onclick="setDriver('breakdown_short')">breakdown_short</button>
+          <button class="chip"    data-chip-driver="news_catalyst"     onclick="setDriver('news_catalyst')">news_catalyst</button>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:7px;align-items:center;">
+          <span style="font-size:10.5px;color:rgba(255,255,255,0.35);font-weight:500;letter-spacing:0.06em;text-transform:uppercase;margin-right:2px;">Side</span>
+          <button class="chip on" data-chip-side="both"  onclick="setSide('both')">Both sides</button>
+          <button class="chip"    data-chip-side="long"  onclick="setSide('long')">Long only</button>
+          <button class="chip"    data-chip-side="short" onclick="setSide('short')">Short only</button>
+        </div>
       </div>
-      <div style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);border-radius:10px;padding:12px 20px;text-align:right;">
-        <div style="font-size:11px;color:rgba(56,189,248,0.7);margin-bottom:2px;">Showing</div>
+      <div style="background:rgba(56,189,248,0.09);border:1px solid rgba(56,189,248,0.22);border-radius:10px;padding:10px 18px;text-align:right;">
+        <div style="font-size:10.5px;color:rgba(56,189,248,0.7);margin-bottom:2px;font-weight:500;">Showing</div>
         <div id="trade-count" style="font-size:18px;font-weight:700;color:#38bdf8;">${trades.length}</div>
       </div>
     </div>
 
-    <!-- Filters -->
-    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px;">
-      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
-        <span style="font-size:11px;color:rgba(255,255,255,0.35);font-weight:500;margin-right:4px;letter-spacing:0.04em;text-transform:uppercase;">Driver</span>
-        <button data-chip-driver="all"               onclick="setDriver('all')"               style="">All drivers</button>
-        <button data-chip-driver="momentum_breakout" onclick="setDriver('momentum_breakout')" style="">momentum_breakout</button>
-        <button data-chip-driver="mean_reversion"    onclick="setDriver('mean_reversion')"    style="">mean_reversion</button>
-        <button data-chip-driver="trend_follow"      onclick="setDriver('trend_follow')"      style="">trend_follow</button>
-        <button data-chip-driver="funding_signal"    onclick="setDriver('funding_signal')"    style="">funding_signal</button>
-        <button data-chip-driver="sentiment_extreme" onclick="setDriver('sentiment_extreme')" style="">sentiment_extreme</button>
-        <button data-chip-driver="breakdown_short"   onclick="setDriver('breakdown_short')"   style="">breakdown_short</button>
-        <button data-chip-driver="news_catalyst"     onclick="setDriver('news_catalyst')"     style="">news_catalyst</button>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
-        <span style="font-size:11px;color:rgba(255,255,255,0.35);font-weight:500;margin-right:4px;letter-spacing:0.04em;text-transform:uppercase;">Side</span>
-        <button data-chip-side="both"  onclick="setSide('both')"  style="">Both sides</button>
-        <button data-chip-side="long"  onclick="setSide('long')"  style="">Long only</button>
-        <button data-chip-side="short" onclick="setSide('short')" style="">Short only</button>
-      </div>
-    </div>
-
-    <div style="overflow-x:auto;border-radius:16px;border:1px solid rgba(255,255,255,0.07);">
+    <div class="tbl-wrap">
       <table style="min-width:820px;">
-        <thead>
-          <tr style="background:rgba(255,255,255,0.04);border-bottom:1px solid rgba(255,255,255,0.08);">
-            <th style="text-align:left;padding:12px 16px;font-size:11px;font-weight:500;color:rgba(255,255,255,0.4);letter-spacing:0.06em;text-transform:uppercase;white-space:nowrap;">Time</th>
-            <th style="text-align:left;padding:12px 16px;font-size:11px;font-weight:500;color:rgba(255,255,255,0.4);letter-spacing:0.06em;text-transform:uppercase;">Side</th>
-            <th style="text-align:left;padding:12px 16px;font-size:11px;font-weight:500;color:rgba(255,255,255,0.4);letter-spacing:0.06em;text-transform:uppercase;white-space:nowrap;">Entry</th>
-            <th style="text-align:left;padding:12px 16px;font-size:11px;font-weight:500;color:rgba(255,255,255,0.4);letter-spacing:0.06em;text-transform:uppercase;">Driver</th>
-            <th style="text-align:left;padding:12px 16px;font-size:11px;font-weight:500;color:rgba(255,255,255,0.4);letter-spacing:0.06em;text-transform:uppercase;">Conf</th>
-            <th style="text-align:left;padding:12px 16px;font-size:11px;font-weight:500;color:rgba(255,255,255,0.4);letter-spacing:0.06em;text-transform:uppercase;min-width:240px;">Rationale</th>
-            <th style="text-align:right;padding:12px 16px;font-size:11px;font-weight:500;color:rgba(255,255,255,0.4);letter-spacing:0.06em;text-transform:uppercase;">Result</th>
-          </tr>
-        </thead>
-        <tbody id="trade-body">
-          ${buildTradeRows()}
-        </tbody>
+        <thead><tr>
+          <th>Time</th><th>Side</th><th>Entry</th><th>Driver</th><th class="right">Conf</th><th>Rationale</th><th class="right">Result</th>
+        </tr></thead>
+        <tbody id="trade-body">${tradeRows()}</tbody>
       </table>
     </div>
   </div>
-</section>
+  ${FOOTER}
+</div>
 
-<!-- ── AUTOPSY REPORT ─────────────────────────────────────────────────────────── -->
-<section id="report" style="background:#08081a;padding:96px 28px;scroll-margin-top:80px;">
-  <div style="max-width:1100px;margin:0 auto;">
-    <p style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#38bdf8;margin-bottom:12px;font-weight:500;">Autopsy report</p>
-    <h2 style="font-family:'Askan Light',Georgia,serif;font-size:clamp(1.6rem,3.5vw,2.6rem);line-height:1.1;letter-spacing:-0.01em;margin-bottom:8px;">The engine's verdict on whether<br>stated reasoning actually explains results.</h2>
-    <p style="font-size:14px;color:rgba(255,255,255,0.45);margin-bottom:48px;line-height:1.6;max-width:560px;">${buildHeadline()}</p>
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     PAGE: REPORT
+═══════════════════════════════════════════════════════════════════════════ -->
+<div id="page-report" class="page">
+  <div class="inner-page narrow">
+    <div class="ph">
+      <div class="ph-label">Autopsy report</div>
+      <div class="ph-title">The engine's verdict on<br>whether stated reasoning explains results.</div>
+      <div class="ph-sub" style="margin-top:12px;">${headline()}</div>
+    </div>
 
-    <!-- KPI cards -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:64px;">
-      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px;">
-        <div style="font-family:'Askan Light',Georgia,serif;font-size:2.2rem;letter-spacing:-0.02em;color:#fff;">${report ? report.totalTrades : "—"}</div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:4px;">Trades analyzed</div>
+    <!-- KPI row -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-num">${report ? report.totalTrades : "—"}</div>
+        <div class="kpi-lbl">Trades analyzed</div>
       </div>
-      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px;">
-        <div style="font-family:'Askan Light',Georgia,serif;font-size:2.2rem;letter-spacing:-0.02em;color:#fff;">${report ? pct(report.overallWinRate) : "—"}</div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:4px;">Overall win rate</div>
+      <div class="kpi-card">
+        <div class="kpi-num">${report ? pct(report.overallWinRate) : "—"}</div>
+        <div class="kpi-lbl">Overall win rate</div>
       </div>
-      <div title="% of stated reasons that were decorative or harmful — 0% is perfect honesty, 100% means nothing the agent said was true" style="background:${sdiCardBg};border:1px solid ${sdiCardBorder};border-radius:16px;padding:24px;cursor:default;">
-        <div style="font-family:'Askan Light',Georgia,serif;font-size:2.2rem;letter-spacing:-0.02em;color:${sdiColor};">${report ? pct(report.selfDeceptionIndex) : "—"}</div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:4px;">Self-deception index <span style="display:inline-flex;align-items:center;justify-content:center;width:12px;height:12px;border-radius:50%;border:1px solid rgba(255,255,255,0.3);font-size:9px;font-weight:700;vertical-align:middle;margin-left:3px;color:rgba(255,255,255,0.4);">?</span></div>
+      <div class="kpi-card" style="background:${sdiBg};border-color:${sdiBorder};" title="Fraction of stated reasons that were decorative or harmful. 0% is perfect, 100% means none of the agent's stated reasons actually predicted wins.">
+        <div class="kpi-num" style="color:${sdiColor};">${sdiText}</div>
+        <div class="kpi-lbl">Self-Deception Index <span style="display:inline-flex;align-items:center;justify-content:center;width:12px;height:12px;border-radius:50%;border:1px solid rgba(255,255,255,0.3);font-size:9px;font-weight:700;vertical-align:middle;margin-left:3px;color:rgba(255,255,255,0.35);">?</span></div>
       </div>
-      <div title="Average gap between stated confidence and actual win rate — e.g. said 80% confident, won 51% of the time = 29pp gap" style="background:${ocgCardBg};border:1px solid ${ocgCardBorder};border-radius:16px;padding:24px;cursor:default;">
-        <div style="font-family:'Askan Light',Georgia,serif;font-size:2.2rem;letter-spacing:-0.02em;color:${ocgColor};">${report ? pct(report.overconfidenceGap) : "—"}</div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:4px;">Overconfidence gap <span style="display:inline-flex;align-items:center;justify-content:center;width:12px;height:12px;border-radius:50%;border:1px solid rgba(255,255,255,0.3);font-size:9px;font-weight:700;vertical-align:middle;margin-left:3px;color:rgba(255,255,255,0.4);">?</span></div>
+      <div class="kpi-card" style="background:${ocgBg};border-color:${ocgBorder};" title="Average gap between stated confidence and actual win rate. A high number means the agent was systematically overconfident.">
+        <div class="kpi-num" style="color:${ocgColor};">${ocgText}</div>
+        <div class="kpi-lbl">Overconfidence Gap <span style="display:inline-flex;align-items:center;justify-content:center;width:12px;height:12px;border-radius:50%;border:1px solid rgba(255,255,255,0.3);font-size:9px;font-weight:700;vertical-align:middle;margin-left:3px;color:rgba(255,255,255,0.35);">?</span></div>
       </div>
     </div>
 
     <!-- Signal attribution -->
-    <div style="margin-bottom:56px;">
-      <h3 style="font-size:16px;font-weight:600;color:#fff;margin-bottom:6px;">What actually moved the PnL?</h3>
-      <p style="font-size:13px;color:rgba(255,255,255,0.45);margin-bottom:24px;line-height:1.55;">${attrLeadText}</p>
-      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;">
-        ${buildSignalRows()}
+    <div class="card">
+      <div class="card-title">What actually moved the PnL?</div>
+      <div class="card-sub">${attrSub}</div>
+      <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07);border-radius:12px;overflow:hidden;">
+        ${signalRows()}
       </div>
     </div>
 
     <!-- Driver verdicts -->
-    <div style="margin-bottom:56px;">
-      <h3 style="font-size:16px;font-weight:600;color:#fff;margin-bottom:6px;">Were the stated reasons real?</h3>
-      <p style="font-size:13px;color:rgba(255,255,255,0.45);margin-bottom:24px;line-height:1.55;">For each reason the agent cited, we compare its win rate against a <strong style="color:rgba(255,255,255,0.7);">direction-adjusted baseline</strong> — what the same long/short mix of other trades won — so a label can't look like an edge just because it rode the market's direction. The L/S column shows that mix. Significance is a two-proportion z-test.</p>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
-        <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:rgba(52,211,153,0.8);"><span style="width:8px;height:8px;border-radius:50%;background:#34d399;flex-shrink:0;"></span>real edge — genuinely predicted wins</span>
-        <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:rgba(251,191,36,0.8);"><span style="width:8px;height:8px;border-radius:50%;background:#fbbf24;flex-shrink:0;"></span>decorative — cited often but made no difference</span>
-        <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:rgba(248,113,113,0.8);"><span style="width:8px;height:8px;border-radius:50%;background:#f87171;flex-shrink:0;"></span>harmful — trades where cited performed worse</span>
-        <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:rgba(255,255,255,0.35);"><span style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.2);flex-shrink:0;"></span>insufficient data</span>
+    <div class="card">
+      <div class="card-title">Were the stated reasons real?</div>
+      <div class="card-sub">Each reason the agent cited is compared against a direction adjusted baseline: what the same long/short mix of trades won without citing that reason. This prevents a label from looking like an edge just because it rode the market's direction. The L/S column shows that mix. Significance uses a two proportion z-test.</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+        <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:rgba(52,211,153,0.85);"><span style="width:8px;height:8px;border-radius:50%;background:#34d399;flex-shrink:0;"></span>real edge</span>
+        <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:rgba(251,191,36,0.85);"><span style="width:8px;height:8px;border-radius:50%;background:#fbbf24;flex-shrink:0;"></span>decorative</span>
+        <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:rgba(248,113,113,0.85);"><span style="width:8px;height:8px;border-radius:50%;background:#f87171;flex-shrink:0;"></span>harmful</span>
+        <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:rgba(255,255,255,0.35);"><span style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.2);flex-shrink:0;"></span>insufficient data</span>
       </div>
-      <div style="overflow-x:auto;border-radius:14px;border:1px solid rgba(255,255,255,0.07);">
-        <table style="min-width:700px;">
-          <thead>
-            <tr style="background:rgba(255,255,255,0.04);border-bottom:1px solid rgba(255,255,255,0.08);">
-              <th style="text-align:left;padding:12px 16px;font-size:11px;font-weight:500;color:rgba(255,255,255,0.4);letter-spacing:0.06em;text-transform:uppercase;">Stated reason</th>
-              <th style="text-align:right;padding:12px 16px;font-size:11px;font-weight:500;color:rgba(255,255,255,0.4);letter-spacing:0.06em;text-transform:uppercase;">Times cited</th>
-              <th style="text-align:left;padding:12px 16px;font-size:11px;font-weight:500;color:rgba(255,255,255,0.4);letter-spacing:0.06em;text-transform:uppercase;">L / S</th>
-              <th style="text-align:right;padding:12px 16px;font-size:11px;font-weight:500;color:rgba(255,255,255,0.4);letter-spacing:0.06em;text-transform:uppercase;">Win rate</th>
-              <th style="text-align:right;padding:12px 16px;font-size:11px;font-weight:500;color:rgba(255,255,255,0.4);letter-spacing:0.06em;text-transform:uppercase;">Dir-adj baseline</th>
-              <th style="text-align:right;padding:12px 16px;font-size:11px;font-weight:500;color:rgba(255,255,255,0.4);letter-spacing:0.06em;text-transform:uppercase;">Δ</th>
-              <th style="text-align:left;padding:12px 16px;font-size:11px;font-weight:500;color:rgba(255,255,255,0.4);letter-spacing:0.06em;text-transform:uppercase;">Verdict</th>
-            </tr>
-          </thead>
-          <tbody>${buildDriverRows()}</tbody>
+      <div class="tbl-wrap">
+        <table style="min-width:680px;">
+          <thead><tr>
+            <th>Stated reason</th><th class="right">Times cited</th><th>L / S</th><th class="right">Win rate</th><th class="right">Dir adj baseline</th><th class="right">Delta</th><th>Verdict</th>
+          </tr></thead>
+          <tbody>${driverRows()}</tbody>
         </table>
       </div>
-      ${report?.effectiveSampleNote ? `<p style="font-size:11.5px;color:rgba(255,255,255,0.3);font-style:italic;margin-top:14px;line-height:1.55;border-top:1px dashed rgba(255,255,255,0.08);padding-top:12px;">${esc(report.effectiveSampleNote)}</p>` : ""}
+      ${report?.effectiveSampleNote ? `<p class="caveat">${esc(report.effectiveSampleNote)}</p>` : ""}
     </div>
 
     <!-- Calibration -->
-    <div>
-      <h3 style="font-size:16px;font-weight:600;color:#fff;margin-bottom:6px;">Did confidence actually mean anything?</h3>
-      <p style="font-size:13px;color:rgba(255,255,255,0.45);margin-bottom:24px;line-height:1.55;">A well-calibrated agent should win ~80% of trades when it says it is 80% confident. A positive gap means it was overconfident — it said a higher number than it deserved.</p>
-      <div style="overflow-x:auto;border-radius:14px;border:1px solid rgba(255,255,255,0.07);">
+    <div class="card">
+      <div class="card-title">Did confidence actually mean anything?</div>
+      <div class="card-sub">A well-calibrated agent wins roughly 80% of trades when it says it is 80% confident. A positive gap means it was overconfident. Confidence stated before the trade, outcome recorded after.</div>
+      <div class="tbl-wrap">
         <table style="min-width:520px;">
-          <thead>
-            <tr style="background:rgba(255,255,255,0.04);border-bottom:1px solid rgba(255,255,255,0.08);">
-              <th style="text-align:left;padding:12px 16px;font-size:11px;font-weight:500;color:rgba(255,255,255,0.4);letter-spacing:0.06em;text-transform:uppercase;">Confidence bucket</th>
-              <th style="text-align:right;padding:12px 16px;font-size:11px;font-weight:500;color:rgba(255,255,255,0.4);letter-spacing:0.06em;text-transform:uppercase;">Trades</th>
-              <th style="text-align:right;padding:12px 16px;font-size:11px;font-weight:500;color:rgba(255,255,255,0.4);letter-spacing:0.06em;text-transform:uppercase;">Agent said</th>
-              <th style="text-align:right;padding:12px 16px;font-size:11px;font-weight:500;color:rgba(255,255,255,0.4);letter-spacing:0.06em;text-transform:uppercase;">Actually won</th>
-              <th style="text-align:right;padding:12px 16px;font-size:11px;font-weight:500;color:rgba(255,255,255,0.4);letter-spacing:0.06em;text-transform:uppercase;">Gap (overconfidence)</th>
-            </tr>
-          </thead>
-          <tbody>${buildCalRows()}</tbody>
+          <thead><tr>
+            <th>Confidence bucket</th><th class="right">Trades</th><th class="right">Agent said</th><th class="right">Actually won</th><th class="right">Gap</th>
+          </tr></thead>
+          <tbody>${calRows()}</tbody>
         </table>
       </div>
     </div>
   </div>
-</section>
+  ${FOOTER}
+</div>
 
-<!-- ── DOCUMENTATION ──────────────────────────────────────────────────────────── -->
-<section id="docs" style="background:#06060f;padding:96px 28px;scroll-margin-top:80px;">
-  <div style="max-width:1100px;margin:0 auto;">
-    <p style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#38bdf8;margin-bottom:12px;font-weight:500;">Documentation</p>
-    <h2 style="font-family:'Askan Light',Georgia,serif;font-size:clamp(1.6rem,3.5vw,2.6rem);line-height:1.1;letter-spacing:-0.01em;margin-bottom:40px;">Everything you need to install,<br>run, and extend Glass Box.</h2>
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     PAGE: DOCS
+═══════════════════════════════════════════════════════════════════════════ -->
+<div id="page-docs" class="page">
+  <div class="inner-page narrow">
+    <div class="ph">
+      <div class="ph-label">Documentation</div>
+      <div class="ph-title">Everything you need to install,<br>run, and understand Glass Box.</div>
+    </div>
 
-    <!-- Tab nav -->
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:32px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:6px;width:fit-content;">
-      <button id="tab-install"  onclick="showDocTab('install')"  style="">Installation</button>
-      <button id="tab-config"   onclick="showDocTab('config')"   style="">Configuration</button>
-      <button id="tab-commands" onclick="showDocTab('commands')" style="">Commands</button>
-      <button id="tab-schema"   onclick="showDocTab('schema')"   style="">Schema</button>
-      <button id="tab-drivers"  onclick="showDocTab('drivers')"  style="">Driver tags</button>
+    <div class="doc-tabs">
+      <button class="doc-tab on" id="dt-install"  onclick="showTab('install')">Installation</button>
+      <button class="doc-tab"    id="dt-config"   onclick="showTab('config')">Configuration</button>
+      <button class="doc-tab"    id="dt-commands" onclick="showTab('commands')">Commands</button>
+      <button class="doc-tab"    id="dt-schema"   onclick="showTab('schema')">Schema</button>
+      <button class="doc-tab"    id="dt-drivers"  onclick="showTab('drivers')">Driver tags</button>
+      <button class="doc-tab"    id="dt-engine"   onclick="showTab('engine')">Engine</button>
     </div>
 
     <!-- Installation -->
-    <div id="doc-install">
-      <h3 style="font-size:18px;font-weight:600;margin-bottom:8px;">Getting started</h3>
-      <p style="font-size:14px;color:rgba(255,255,255,0.5);margin-bottom:20px;line-height:1.6;">Glass Box requires Node.js 20 or later. No other runtime dependencies.</p>
-      <pre style="background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:24px;font-family:'Courier New',monospace;font-size:13px;line-height:1.9;color:rgba(255,255,255,0.8);overflow-x:auto;white-space:pre;">git clone https://github.com/IamHarrie-Labs/glass-box
+    <div id="dp-install" class="doc-panel on">
+      <h3 style="font-size:17px;font-weight:600;margin-bottom:8px;">Getting started</h3>
+      <p style="font-size:14px;color:rgba(255,255,255,0.5);margin-bottom:18px;line-height:1.65;">Glass Box requires Node.js 20 or later. No additional runtime dependencies.</p>
+      <pre>git clone https://github.com/IamHarrie-Labs/glass-box
 cd glass-box
 npm install</pre>
+      <p style="font-size:13px;color:rgba(255,255,255,0.45);line-height:1.65;">After install, copy <code style="background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px;">.env.example</code> to <code style="background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px;">.env</code> and add your LLM API key. Then run the agent with <code style="background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px;">npm run agent</code>.</p>
     </div>
 
     <!-- Configuration -->
-    <div id="doc-config" style="display:none;">
-      <h3 style="font-size:18px;font-weight:600;margin-bottom:8px;">Configuration</h3>
-      <p style="font-size:14px;color:rgba(255,255,255,0.5);margin-bottom:20px;line-height:1.6;">Copy <code style="background:rgba(255,255,255,0.08);padding:2px 7px;border-radius:4px;">.env.example</code> to <code style="background:rgba(255,255,255,0.08);padding:2px 7px;border-radius:4px;">.env</code> and fill in your LLM key. Swap providers with no code change — just update the three <code style="background:rgba(255,255,255,0.08);padding:2px 7px;border-radius:4px;">LLM_*</code> vars.</p>
-      <pre style="background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:24px;font-family:'Courier New',monospace;font-size:12px;line-height:1.9;color:rgba(255,255,255,0.75);overflow-x:auto;white-space:pre;"># Required to enable the LLM brain
+    <div id="dp-config" class="doc-panel">
+      <h3 style="font-size:17px;font-weight:600;margin-bottom:8px;">Configuration</h3>
+      <p style="font-size:14px;color:rgba(255,255,255,0.5);margin-bottom:18px;line-height:1.65;">All settings are environment variables. Copy <code style="background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px;">.env.example</code> to <code style="background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px;">.env</code> to get started. Swap LLM providers by updating the three <code style="background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px;">LLM_*</code> vars. No code changes needed.</p>
+      <pre># LLM provider (any OpenAI-compatible endpoint)
 LLM_API_KEY=your-key-here
-
-# Any OpenAI-compatible endpoint works
 LLM_BASE_URL=https://api.groq.com/openai/v1
 LLM_MODEL=llama-3.1-8b-instant
 
-# Tick interval in seconds (120 = 1 call / 2 min, safe for free tiers)
+# Tick interval in seconds
+# 120 = one call every 2 minutes (safe for free-tier rate limits)
 TICK_SECONDS=120
 
-# Assets to trade, rotated one per tick. Multiple assets stop the
-# "real driver" finding from being a single-coin tautology.
+# Assets to trade, rotated one per tick.
+# Multiple assets prevent the real driver finding from being a
+# single-asset tautology (e.g. BTC predicting BTC).
 SYMBOLS=BTCUSDT,ETHUSDT,SOLUSDT
 
-# Round-trip trading friction (fee + slippage) charged per closed
-# position, in basis points. Keeps paper PnL honest. Default 6.
-FRICTION_BPS=6</pre>
+# Round-trip trading friction in basis points (fee + slippage).
+# Applied to every closed position to keep paper PnL honest.
+# Default 6 bps. Set to 0 to disable.
+FRICTION_BPS=6
+
+# GitHub persistence (optional, for live Vercel site updates)
+GITHUB_TOKEN=your-classic-pat
+GITHUB_REPO=IamHarrie-Labs/glass-box
+GITHUB_BRANCH=master</pre>
     </div>
 
     <!-- Commands -->
-    <div id="doc-commands" style="display:none;animation:fadeUp 0.4s ease-out both;">
-      <h3 style="font-size:18px;font-weight:600;margin-bottom:20px;">Commands</h3>
-      <div style="display:flex;flex-direction:column;gap:12px;">
+    <div id="dp-commands" class="doc-panel">
+      <h3 style="font-size:17px;font-weight:600;margin-bottom:16px;">Commands</h3>
+      <div class="cmd-list">
         ${[
-          ["npm run agent",   "Starts the live paper-trading agent. Ticks every TICK_SECONDS, fetches Bitget market data, asks the LLM to reason, logs a decision record. Runs continuously until stopped."],
-          ["npm run autopsy", "Reads data/trades.jsonl, closes matured positions, runs the three autopsy analyses (attribution, self-deception, calibration), writes data/report.json."],
-          ["npm run site",    "Builds this site (docs/index.html) with live data embedded from trades.jsonl and report.json. The push.ts module calls this automatically every hour."],
-          ["npm run report",  "Reads data/report.json and generates data/report.html, a self-contained audit report. Open in any browser."],
-          ["npm run demo",    "Seeds synthetic trades, runs autopsy, builds report. Fully offline — no keys or network needed. Good for a quick proof-of-concept."],
-        ].map(([cmd, desc]) => `
-        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:20px 24px;">
-          <code style="font-size:14px;color:#38bdf8;">${cmd}</code>
-          <p style="font-size:13px;color:rgba(255,255,255,0.5);margin-top:8px;line-height:1.6;">${desc}</p>
-        </div>`).join("")}
+          ["npm run agent",   "Starts the live paper-trading loop. Fetches Bitget market data every TICK_SECONDS, asks the LLM to reason, locks in the stated thesis, and writes a decision record. Rotates through SYMBOLS one per tick. Runs continuously until stopped."],
+          ["npm run autopsy", "Reads data/trades.jsonl, closes any matured open positions at the last known price, then runs the three autopsy analyses (signal attribution, self-deception detection, confidence calibration). Writes data/report.json."],
+          ["npm run site",    "Reads data/trades.jsonl and data/report.json and regenerates docs/index.html with all live data embedded. Deploy the docs folder to any static host."],
+          ["npm run report",  "Generates data/report.html, a standalone single-file audit report. Open in any browser, no server needed."],
+          ["npm run demo",    "Seeds synthetic trade data, runs autopsy, and builds the report. Fully offline. No API keys or network connection required."],
+        ].map(([cmd, desc]) => `<div class="cmd-card"><code>${cmd}</code><p>${desc}</p></div>`).join("")}
       </div>
     </div>
 
     <!-- Schema -->
-    <div id="doc-schema" style="display:none;animation:fadeUp 0.4s ease-out both;">
-      <h3 style="font-size:18px;font-weight:600;margin-bottom:8px;">Decision record schema</h3>
-      <p style="font-size:14px;color:rgba(255,255,255,0.5);margin-bottom:20px;line-height:1.6;">Every trade the agent opens is written to <code style="background:rgba(255,255,255,0.08);padding:2px 7px;border-radius:4px;">data/trades.jsonl</code> as one JSON object per line. The thesis is written before the position opens — outcome fields are filled in after close.</p>
-      <pre style="background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:24px;font-family:'Courier New',monospace;font-size:12px;line-height:1.9;color:rgba(255,255,255,0.75);overflow-x:auto;white-space:pre;">{
+    <div id="dp-schema" class="doc-panel">
+      <h3 style="font-size:17px;font-weight:600;margin-bottom:8px;">Decision record schema</h3>
+      <p style="font-size:14px;color:rgba(255,255,255,0.5);margin-bottom:18px;line-height:1.65;">Every trade the agent opens is written to <code style="background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px;">data/trades.jsonl</code> as one JSON object per line. The stated thesis is recorded before the position opens. Outcome fields are filled in at close. Any external agent that writes this schema can be audited by Glass Box without modifying agent code.</p>
+      <pre>{
   "tradeId": "t_51bfe01c",
   "timestamp": "2026-06-23T09:17:09.000Z",
   "pair": "BTCUSDT",
@@ -573,10 +607,10 @@ FRICTION_BPS=6</pre>
   "entryPrice": 62446.5,
   "sizeUsd": 1000,
   "statedThesis": {
-    "primaryDriver": "mean_reversion",   // closed enum — see Driver tags
+    "primaryDriver": "mean_reversion",
     "supportingSignals": ["rsi_oversold", "funding_negative"],
     "confidence": 0.70,
-    "naturalLanguage": "The market is oversold and due for a bounce..."
+    "naturalLanguage": "Market is oversold and due for a bounce..."
   },
   "marketSnapshot": {
     "price": 62446.5,
@@ -587,134 +621,121 @@ FRICTION_BPS=6</pre>
     "fearGreed": 38,
     "volatility": 0.018
   },
-  "outcome": {                // null until position closes
+  "outcome": {
     "exitPrice": 63100.0,
     "pnlUsd": 10.47,
     "heldMinutes": 240
   }
 }</pre>
-      <p style="font-size:13px;color:rgba(255,255,255,0.45);margin-top:14px;line-height:1.6;">Any external agent that logs this schema can be autopsied by Glass Box without touching agent code.</p>
     </div>
 
-    <!-- Drivers -->
-    <div id="doc-drivers" style="display:none;animation:fadeUp 0.4s ease-out both;">
-      <h3 style="font-size:18px;font-weight:600;margin-bottom:8px;">Driver tags</h3>
-      <p style="font-size:14px;color:rgba(255,255,255,0.5);margin-bottom:24px;line-height:1.6;">The LLM is constrained to map its reasoning onto this closed enum. Free-text reasons cannot be aggregated across trades — a closed enum can. This is what makes the self-deception analysis statistically valid.</p>
-      <div style="display:flex;flex-direction:column;gap:8px;">
+    <!-- Driver tags -->
+    <div id="dp-drivers" class="doc-panel">
+      <h3 style="font-size:17px;font-weight:600;margin-bottom:8px;">Driver tags</h3>
+      <p style="font-size:14px;color:rgba(255,255,255,0.5);margin-bottom:20px;line-height:1.65;">The LLM is constrained to map its reasoning onto this closed enum before each trade. Free-text rationale cannot be aggregated across trades statistically. A closed enum can be. This is what makes the self-deception analysis possible.</p>
+      <div class="tag-list">
         ${[
-          ["momentum_breakout", "#38bdf8", "Price breaking a level with volume/trend confirmation"],
-          ["mean_reversion",    "#a78bfa", "Price has overshot and is due to revert"],
-          ["trend_follow",      "#fbbf24", "Established trend continuation"],
-          ["sentiment_extreme", "#f87171", "Fear and Greed or positioning at an extreme"],
-          ["funding_signal",    "#34d399", "Funding rate imbalance suggesting crowded positioning"],
-          ["breakdown_short",   "#fb923c", "Support break with downside momentum"],
-          ["news_catalyst",     "rgba(255,255,255,0.55)", "Identifiable news or macro event driving price"],
-        ].map(([tag, color, desc]) => `
-        <div style="display:flex;gap:16px;align-items:flex-start;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:16px 20px;">
-          <code style="font-family:'Courier New',monospace;font-size:12px;color:${color};flex-shrink:0;min-width:170px;">${tag}</code>
-          <span style="font-size:13px;color:rgba(255,255,255,0.5);line-height:1.5;">${desc}</span>
-        </div>`).join("")}
+          ["momentum_breakout", "#38bdf8", "Price breaking a level with volume or trend confirmation"],
+          ["mean_reversion",    "#a78bfa", "Price has overshot and is likely to revert toward the mean"],
+          ["trend_follow",      "#fbbf24", "Established trend continuation with momentum behind it"],
+          ["sentiment_extreme", "#f87171", "Fear and Greed index or positioning at a historical extreme"],
+          ["funding_signal",    "#34d399", "Funding rate imbalance indicating a crowded one-sided position"],
+          ["breakdown_short",   "#fb923c", "Support break with downside momentum confirming the move"],
+          ["news_catalyst",     "rgba(255,255,255,0.65)", "Identifiable news or macro event driving price action"],
+        ].map(([tag, color, desc]) => `<div class="tag-row"><code style="color:${color};">${tag}</code><span>${desc}</span></div>`).join("")}
       </div>
-      <div style="margin-top:28px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:20px 24px;">
-        <h4 style="font-size:14px;font-weight:600;margin-bottom:12px;color:rgba(255,255,255,0.8);">Engine methodology</h4>
-        <div style="display:flex;flex-direction:column;gap:12px;">
-          ${[
-            ["Signal attribution", "Pearson correlation of each objective market feature (RSI, 1h return, 24h return, funding rate, Fear &amp; Greed, volatility) with realized PnL. Answers: what actually predicted your winners, regardless of what you said?"],
-            ["Self-deception detection", "For each driver, compares its win rate against a direction-adjusted baseline — what the same long/short mix of other trades won — so a label can't look like an edge just because it rode the market's direction. Significance is a two-proportion z-test. No real lift → decorative; significant negative lift → harmful; significant positive lift → real edge."],
-            ["Confidence calibration", "Groups trades by stated confidence bucket and compares stated confidence against actual win rate. The Overconfidence Gap is the average spread between what the agent said and what happened."],
-            ["Honesty caveat", "Trades on one asset open minutes apart and are held for hours, so their windows overlap and outcomes aren't fully independent. The report says so out loud and treats z-scores as directional, not hard p-values. PnL is also net of round-trip trading friction (FRICTION_BPS)."],
-          ].map(([name, desc]) => `
-          <div>
-            <span style="font-size:13px;font-weight:500;color:rgba(255,255,255,0.75);">${name}</span>
-            <p style="font-size:13px;color:rgba(255,255,255,0.4);margin-top:4px;line-height:1.6;">${desc}</p>
-          </div>`).join("")}
-        </div>
-      </div>
+      <p style="font-size:12.5px;color:rgba(255,255,255,0.35);margin-top:16px;line-height:1.6;">The autopsy feedback loop removes only <strong style="color:rgba(255,255,255,0.55);">harmful</strong> drivers from the agent's allowed set after each analysis. Decorative and untested drivers remain so the comparison group stays valid and the baseline does not collapse.</p>
     </div>
-  </div>
-</section>
 
-<!-- ── FOOTER ─────────────────────────────────────────────────────────────────── -->
-<footer style="background:#03030a;border-top:1px solid rgba(255,255,255,0.06);padding:40px 28px;">
-  <div style="max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;">
-    <div style="display:flex;align-items:center;gap:10px;">
-      <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-        <polygon points="10,2 18,6 10,10 2,6" fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.6)" stroke-width="0.8" stroke-linejoin="round"/>
-        <polygon points="2,6 10,10 10,18 2,14" fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.6)" stroke-width="0.8" stroke-linejoin="round"/>
-        <polygon points="10,10 18,6 18,14 10,18" fill="rgba(255,255,255,0.13)" stroke="rgba(255,255,255,0.6)" stroke-width="0.8" stroke-linejoin="round"/>
-      </svg>
-      <span style="font-family:'Askan Light',Georgia,serif;font-size:14px;color:rgba(255,255,255,0.6);letter-spacing:0.06em;">glassbox</span>
-      <span style="font-size:11px;color:rgba(255,255,255,0.25);margin-left:8px;">open-source agent audit layer</span>
+    <!-- Engine -->
+    <div id="dp-engine" class="doc-panel">
+      <h3 style="font-size:17px;font-weight:600;margin-bottom:16px;">Engine methodology</h3>
+      <div class="cmd-list">
+        ${[
+          ["Signal attribution",
+           "Pearson correlation of each objective market feature (RSI, 1h return, 24h return, funding rate, Fear and Greed, volatility) with realized PnL. Answers: what actually predicted your winners, regardless of what the agent said? PnL is net of round-trip trading friction (FRICTION_BPS)."],
+          ["Self-deception detection",
+           "For each driver the agent cited, its win rate is compared against a direction adjusted baseline: what the same long/short mix of other trades won without citing that driver. This prevents a label from appearing to have edge simply because it was used when the market happened to be rising. Significance is tested with a two proportion z-test. No real lift produces a decorative verdict. Significant negative lift produces a harmful verdict. Significant positive lift produces a real edge verdict."],
+          ["Confidence calibration",
+           "Trades are grouped by stated confidence bucket (0 to 0.6, 0.6 to 0.75, etc.) and stated confidence is compared against the actual win rate within each bucket. The Overconfidence Gap is the average spread between what the agent claimed and what happened."],
+          ["Autopsy feedback loop",
+           "After each autopsy, the verified findings are injected into the agent's system prompt for the next tick. Harmful drivers are removed from the allowed DriverTag enum so the agent cannot cite them again. Decorative drivers remain: removing them would collapse the comparison group and make future baselines invalid."],
+          ["Multi-asset rotation",
+           "The agent rotates through BTCUSDT, ETHUSDT, and SOLUSDT one per tick. This prevents the signal attribution finding from being a single-asset tautology (e.g. BTC price predicting BTC trades, which is trivially true)."],
+          ["Honesty caveat",
+           "Trades on one asset that open minutes apart and are held for hours have overlapping windows, so outcomes are not fully independent. The report says so explicitly and treats z-scores as directional rather than strict p-values. The effectiveSampleNote field in the report spells this out per driver."],
+        ].map(([name, desc]) => `<div class="cmd-card"><code style="color:rgba(255,255,255,0.8);font-size:13px;">${name}</code><p>${desc}</p></div>`).join("")}
+      </div>
     </div>
-    <div style="display:flex;align-items:center;gap:24px;">
-      <span style="font-size:11px;color:rgba(255,255,255,0.25);">Bitget AI Hackathon S1</span>
-      <a href="https://github.com/IamHarrie-Labs/glass-box" target="_blank" style="font-size:12px;color:rgba(255,255,255,0.4);">github.com/IamHarrie-Labs/glass-box</a>
-    </div>
+
   </div>
-</footer>
+  ${FOOTER}
+</div>
 
 <script>
-// ── Nav scroll background ──────────────────────────────────────────────────
+// ── SPA router ────────────────────────────────────────────────────────────────
+const PAGES = ['home','logs','report','docs'];
+const NAV_IDS = { home:'nav-home', logs:'nav-logs', report:'nav-report', docs:'nav-docs' };
+
+function navigate(page) {
+  if (!PAGES.includes(page)) page = 'home';
+  PAGES.forEach(p => {
+    const el = document.getElementById('page-' + p);
+    if (el) el.style.display = p === page ? 'block' : 'none';
+  });
+  Object.entries(NAV_IDS).forEach(([p, id]) => {
+    const btn = document.getElementById(id);
+    if (btn) { btn.classList.toggle('on', p === page); }
+  });
+  const url = page === 'home' ? '/' : '/' + page;
+  history.pushState({ page }, '', url);
+  window.scrollTo(0, 0);
+}
+
+window.addEventListener('popstate', e => {
+  navigate(e.state?.page || pathToPage());
+});
+
+function pathToPage() {
+  const p = window.location.pathname.replace(/^\//, '') || 'home';
+  return PAGES.includes(p) ? p : 'home';
+}
+
+// Initial load
+navigate(pathToPage());
+
+// ── Nav scroll ────────────────────────────────────────────────────────────────
 const gbNav = document.getElementById('gb-nav');
 window.addEventListener('scroll', () => {
-  const scrolled = window.scrollY > 60;
-  gbNav.style.background = scrolled ? 'rgba(6,6,15,0.88)' : 'transparent';
-  gbNav.style.backdropFilter = scrolled ? 'blur(20px)' : 'none';
-  gbNav.style.webkitBackdropFilter = scrolled ? 'blur(20px)' : 'none';
-  gbNav.style.borderBottomColor = scrolled ? 'rgba(255,255,255,0.06)' : 'transparent';
+  gbNav.classList.toggle('scrolled', window.scrollY > 40);
 }, { passive: true });
 
-// ── Mobile menu ────────────────────────────────────────────────────────────
-let menuIsOpen = false;
-function toggleMenu() {
-  menuIsOpen = !menuIsOpen;
-  document.getElementById('gb-mobile-menu').style.display = menuIsOpen ? 'flex' : 'none';
-  document.getElementById('burger-open').style.display  = menuIsOpen ? 'none' : 'inline';
-  document.getElementById('burger-close').style.display = menuIsOpen ? 'inline' : 'none';
-}
-function closeMenu() {
-  menuIsOpen = false;
-  document.getElementById('gb-mobile-menu').style.display = 'none';
-  document.getElementById('burger-open').style.display  = 'inline';
-  document.getElementById('burger-close').style.display = 'none';
-}
-
-// ── Responsive nav ─────────────────────────────────────────────────────────
+// ── Mobile nav ─────────────────────────────────────────────────────────────────
 function applyNavLayout() {
-  const isMobile = window.innerWidth < 768;
-  document.getElementById('desktop-nav').style.display = isMobile ? 'none' : 'flex';
-  document.getElementById('gh-btn').style.display      = isMobile ? 'none' : 'inline-flex';
-  document.getElementById('burger-btn').style.display  = isMobile ? 'flex' : 'none';
+  const mob = window.innerWidth < 768;
+  document.getElementById('desktop-links').style.display = mob ? 'none' : 'flex';
+  document.getElementById('gh-link').style.display       = mob ? 'none' : 'inline-flex';
+  document.getElementById('burger-btn').style.display    = mob ? 'flex' : 'none';
 }
 applyNavLayout();
 window.addEventListener('resize', applyNavLayout);
 
-// ── Section observer for active nav link ───────────────────────────────────
-const NAV_ACTIVE   = 'color:#fff;background:rgba(255,255,255,0.1);padding:5px 12px;border-radius:8px;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:all 0.15s;';
-const NAV_INACTIVE = 'color:rgba(255,255,255,0.58);background:transparent;padding:5px 12px;border-radius:8px;font-size:13px;font-weight:400;display:inline-flex;align-items:center;gap:6px;transition:all 0.15s;';
-const navEls = { home: document.getElementById('nav-home'), logs: document.getElementById('nav-logs'), report: document.getElementById('nav-report'), docs: document.getElementById('nav-docs') };
-const sectionToNav = { home:'home', howitworks:'home', logs:'logs', report:'report', docs:'docs' };
+let menuOpen = false;
+function toggleMenu() {
+  menuOpen = !menuOpen;
+  document.getElementById('mobile-menu').style.display  = menuOpen ? 'flex' : 'none';
+  document.getElementById('burger-open').style.display  = menuOpen ? 'none' : 'inline';
+  document.getElementById('burger-close').style.display = menuOpen ? 'inline' : 'none';
+}
+function closeMenu() {
+  menuOpen = false;
+  document.getElementById('mobile-menu').style.display  = 'none';
+  document.getElementById('burger-open').style.display  = 'inline';
+  document.getElementById('burger-close').style.display = 'none';
+}
 
-const observer = new IntersectionObserver(entries => {
-  entries.forEach(e => {
-    if (e.isIntersecting) {
-      const navId = sectionToNav[e.target.id];
-      Object.entries(navEls).forEach(([id, el]) => {
-        if (el) {
-          const badge = id === 'logs' ? ' <span style="font-size:10px;background:rgba(56,189,248,0.18);color:#38bdf8;padding:1px 6px;border-radius:4px;">${trades.length}</span>' : '';
-          el.setAttribute('style', id === navId ? NAV_ACTIVE : NAV_INACTIVE);
-        }
-      });
-    }
-  });
-}, { threshold: 0.25 });
-['home','howitworks','logs','report','docs'].forEach(id => { const el = document.getElementById(id); if (el) observer.observe(el); });
-
-// ── Trade chip filters ─────────────────────────────────────────────────────
+// ── Trade filters ─────────────────────────────────────────────────────────────
 let activeDriver = 'all', activeSide = 'both';
-
-const CHIP_ON  = 'background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.35);color:#38bdf8;padding:6px 13px;border-radius:100px;font-size:12px;font-family:Inter,sans-serif;cursor:pointer;font-weight:500;';
-const CHIP_OFF = 'background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.58);padding:6px 13px;border-radius:100px;font-size:12px;font-family:Inter,sans-serif;cursor:pointer;font-weight:400;';
 
 function setDriver(d) { activeDriver = d; applyFilters(); }
 function setSide(s)   { activeSide   = s; applyFilters(); }
@@ -727,35 +748,31 @@ function applyFilters() {
     row.style.display = show ? '' : 'none';
     if (show) count++;
   });
-  document.getElementById('trade-count').textContent = count;
-
-  document.querySelectorAll('[data-chip-driver]').forEach(btn => {
-    btn.setAttribute('style', btn.dataset.chipDriver === activeDriver ? CHIP_ON : CHIP_OFF);
+  const el = document.getElementById('trade-count');
+  if (el) el.textContent = count;
+  document.querySelectorAll('[data-chip-driver]').forEach(b => {
+    b.classList.toggle('on', b.dataset.chipDriver === activeDriver);
   });
-  document.querySelectorAll('[data-chip-side]').forEach(btn => {
-    btn.setAttribute('style', btn.dataset.chipSide === activeSide ? CHIP_ON : CHIP_OFF);
-  });
-}
-applyFilters(); // initialize chip styles
-
-// ── Docs tabs ──────────────────────────────────────────────────────────────
-const TAB_ON  = 'background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.14);color:#fff;padding:7px 16px;border-radius:8px;font-size:13px;font-family:Inter,sans-serif;cursor:pointer;font-weight:500;';
-const TAB_OFF = 'background:transparent;border:1px solid transparent;color:rgba(255,255,255,0.45);padding:7px 16px;border-radius:8px;font-size:13px;font-family:Inter,sans-serif;cursor:pointer;font-weight:400;';
-
-function showDocTab(tab) {
-  ['install','config','commands','schema','drivers'].forEach(t => {
-    const panel = document.getElementById('doc-' + t);
-    const btn   = document.getElementById('tab-' + t);
-    if (panel) panel.style.display = t === tab ? 'block' : 'none';
-    if (btn)   btn.setAttribute('style', t === tab ? TAB_ON : TAB_OFF);
+  document.querySelectorAll('[data-chip-side]').forEach(b => {
+    b.classList.toggle('on', b.dataset.chipSide === activeSide);
   });
 }
-showDocTab('install');
+
+// ── Doc tabs ──────────────────────────────────────────────────────────────────
+const DOC_TABS = ['install','config','commands','schema','drivers','engine'];
+
+function showTab(t) {
+  DOC_TABS.forEach(id => {
+    const panel = document.getElementById('dp-' + id);
+    const btn   = document.getElementById('dt-' + id);
+    if (panel) panel.classList.toggle('on', id === t);
+    if (btn)   btn.classList.toggle('on', id === t);
+  });
+}
 </script>
 </body>
 </html>`;
 
 mkdirSync("docs", { recursive: true });
 writeFileSync("docs/index.html", HTML, "utf8");
-console.log(`Wrote docs/index.html (${trades.length} trades, report: ${report ? "yes" : "no data yet"})`);
-console.log("Open docs/index.html in a browser or push to deploy.");
+console.log(`Wrote docs/index.html (${trades.length} trades, report: ${report ? "yes" : "no"})`);
