@@ -15,9 +15,10 @@
   },
   "keywords": ["bitget", "ai-agent", "trading", "audit", "infra", "hackathon"],
   "license": "MIT",
-  "dependencies": {},
+  "dependencies": {
+    "tsx": "^4.19.2"
+  },
   "devDependencies": {
-    "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "@types/node": "^22.10.2"
   }
