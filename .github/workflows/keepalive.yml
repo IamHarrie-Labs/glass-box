@@ -5,10 +5,12 @@ name: keepalive
 # health endpoint every 10 minutes so the instance stays awake and keeps
 # trading. (GitHub may delay scheduled runs under load; for bulletproof
 # uptime add an external monitor like UptimeRobot at a 5-minute interval.)
+#
+# Currently disabled: the Render service is suspended (the agent now runs
+# on Railway instead, which doesn't spin down). Re-add the schedule trigger
+# below if Render is ever brought back into service.
 
 on:
-  schedule:
-    - cron: "*/10 * * * *"
   workflow_dispatch: {}
 
 jobs:
